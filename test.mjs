@@ -1,0 +1,11 @@
+import assert from 'node:assert/strict';
+import {Match} from './engine.mjs';
+const match=()=>{const m=new Match({duration:120});m.state='playing';return m;};
+let m=match();assert.equal(m.players.length,12);m.step(.02,[{x:1},{}]);assert(m.time>0);m.state='paused';const time=m.time;m.step(.02);assert.equal(m.time,time);
+m=match();m.kick(5,false);assert.equal(m.ball.owner,null);assert.equal(m.passes[0],1);assert.notEqual(m.selected[0],5);
+m=match();m.kick(5,true,.9);assert.equal(m.shots[0],1);assert(Math.hypot(m.ball.vx,m.ball.vy)>700);
+m=match();m.ball={x:901,y:290,vx:100,vy:0,owner:null,lock:1,last:0};m.step(.01);assert.deepEqual(m.score,[1,0]);assert(m.wait>0);
+m=match();m.ball={x:500,y:55,vx:0,vy:-100,owner:null,lock:1,last:0};m.step(.01);assert.equal(m.event,'边线球');assert.equal(m.players[m.ball.owner].t,1);
+m=match();m.ball={x:903,y:100,vx:100,vy:0,owner:null,lock:1,last:1};m.step(.01);assert.equal(m.event,'角球');
+m=match();m.time=59.999;m.step(.01);assert.equal(m.half,2);assert.equal(m.direction(0),-1);m.wait=0;m.time=119.999;m.step(.01);assert.equal(m.state,'ended');
+m=match();for(let i=0;i<12000;i++)m.step(.02);assert.equal(m.state,'ended');assert(m.players.every(p=>Number.isFinite(p.x)&&p.x>=60&&p.x<=900));assert(m.score.every(Number.isFinite));console.log('PASS: movement, pause, passing, shooting, goal, throw-in, corner, half-time, full match simulation.');
