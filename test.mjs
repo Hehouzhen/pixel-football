@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import {Match, FIELD} from './engine.mjs';
 import {LEAGUES, fixtures, createSeason, currentFixture, completeWeek, standings, leaders} from './league.mjs';
+import {createCareerPlayer,finishCareerMatch} from './career.mjs';
 
 const match = (options={}) => { const m=new Match({duration:120,...options}); m.state='playing'; return m; };
 let m=match();
@@ -25,6 +26,10 @@ m=match();m.time=59.99;m.step(.02);assert.equal(m.half,2);assert.equal(m.directi
 for(let difficulty=0;difficulty<3;difficulty++){m=match({difficulty});for(let i=0;i<9000;i++)m.step(.02);assert.equal(m.state,'ended');assert(m.players.every((p,id)=>!m.active(id)||(Number.isFinite(p.x)&&p.x>=FIELD.left&&p.x<=FIELD.right)));assert(m.shots[1]>0,'opponent must attack when user is idle')}
 assert.equal(match({difficulty:0}).pressers(1),1);assert.equal(match({difficulty:2}).pressers(1),3);assert.equal(match({tactic:'press'}).pressers(0),3);assert.equal(match({tactic:'counter'}).pressers(0),1);
 
+m=match({careerIndex:1,careerAttributes:{shooting:52,passing:58,defense:70}});assert.equal(m.selected[0],1);m.ball.owner=5;assert(m.requestPass());assert.equal(m.selected[0],1);assert.equal(m.stats[5].passes,1);m.reset(1);assert.equal(m.selected[0],1);
+for(let i=0;i<9000;i++)m.step(.02);assert.equal(m.state,'ended');assert.equal(m.selected[0],1);
+let player=createCareerPlayer('测试球员',4,'defender');player.xp=95;player=finishCareerMatch(player,{tackles:3,passes:4,passesCompleted:3,distance:80},[1,0],180);assert.equal(player.level,2);assert.equal(player.attributes.defense,72);assert.equal(player.stats.appearances,1);assert.equal(player.stats.tackles,3);
+
 const league=LEAGUES[0],rounds=fixtures(league);assert.equal(rounds.length,10);assert.equal(new Set(rounds.flat().map(pair=>pair.join(':'))).size,30);
 const season=createSeason(league.id,league.teams[0].id);for(let i=0;i<10;i++){assert(currentFixture(season));completeWeek(season,[2,1],Array.from({length:12},(_,j)=>({goals:j===5?2:0,assists:j===4?1:0})))}assert.equal(season.results.length,30);assert(standings(season).every(row=>row.played===10));assert.equal(currentFixture(season),undefined);assert(leaders(season)[0].goals>=20);
-console.log('PASS: match flow, active AI, crosses, aerial shots, penalty, cards, boundaries, full season and leaderboards.');
+console.log('PASS: match flow, MyCareer control and growth, active AI, detailed stats, full season and leaderboards.');

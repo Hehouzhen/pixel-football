@@ -4,13 +4,14 @@ export const SAVE_KEY='pixel-pitch-saves-v2';
 export const LEGACY_KEY='pixel-pitch-season-v1';
 
 function validSeason(season){return !!season&&LEAGUES.some(league=>league.id===season.leagueId&&league.teams.some(team=>team.id===season.teamId))&&Number.isInteger(season.week)&&season.week>=0&&season.week<=10&&Array.isArray(season.results)&&!!season.players}
+function validCareer(player){return !!player&&typeof player.name==='string'&&['forward','midfielder','defender'].includes(player.position)&&Number.isInteger(player.index)&&!!player.attributes&&!!player.stats}
 function blank(){return {version:2,active:null,slots:[null,null,null]}}
 
 export function loadSaveData(storage=localStorage){
   try{
     const saved=JSON.parse(storage.getItem(SAVE_KEY));
     if(saved?.version===2&&Array.isArray(saved.slots)){
-      const slots=Array.from({length:3},(_,index)=>{const slot=saved.slots[index];return slot?.mode==='club'&&validSeason(slot.season)?slot:null});
+      const slots=Array.from({length:3},(_,index)=>{const slot=saved.slots[index];return validSeason(slot?.season)&&(slot.mode==='club'||slot.mode==='career'&&validCareer(slot.player))?slot:null});
       const active=Number.isInteger(saved.active)&&slots[saved.active]?saved.active:null;
       return {version:2,active,slots};
     }
@@ -25,4 +26,5 @@ export function loadSaveData(storage=localStorage){
 }
 
 export function makeClubSlot(season,difficulty=1,duration=180,now=Date.now()){return {mode:'club',season,difficulty,duration,createdAt:now,updatedAt:now}}
+export function makeCareerSlot(season,player,difficulty=1,duration=180,now=Date.now()){return {mode:'career',season,player,difficulty,duration,createdAt:now,updatedAt:now}}
 export function saveSaveData(data,storage=localStorage){storage.setItem(SAVE_KEY,JSON.stringify(data))}
