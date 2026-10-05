@@ -6,7 +6,7 @@
 
 - 项目根目录：本文件所在的 `pixel-football/` 文件夹；在 Codex 中选择包含本文件的项目。
 - GitHub 仓库：`https://github.com/Hehouzhen/pixel-football`
-- 计划中的 GitHub Pages 地址：`https://hehouzhen.github.io/pixel-football/`。以 GitHub Pages 实际部署结果为准。
+- GitHub Pages 公开地址：`https://hehouzhen.github.io/pixel-football/`。2026-10-05 已确认首页和主要脚本、样式返回 HTTP 200；首发工作流 `https://github.com/Hehouzhen/pixel-football/actions/runs/37300776842` 成功，游戏版本提交为 `19f59d9`。
 - 本地预览：在项目目录运行 `node preview.mjs 4174`，打开 `http://127.0.0.1:4174/`。本地服务需要保持运行；关机或进程结束后要重启。
 - 发布流程：推送 `main` 后，`.github/workflows/pages.yml` 在 GitHub Actions 执行 `npm ci`、`npm test`、`npm run build`，再发布 `dist/`。仓库 Settings → Pages 的 Source 必须是 **GitHub Actions**。
 - 本项目以前也关联过 Sites，配置保留在 `.openai/hosting.json`；目前公开上线目标改为 GitHub Pages，不要误推送到内部 Sites 远端 `origin`。
