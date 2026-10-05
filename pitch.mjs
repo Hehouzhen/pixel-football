@@ -19,7 +19,7 @@ export function draw(ctx,g){const f=FIELD;ctx.imageSmoothingEnabled=false;ctx.fi
     const pose=celebrating?celebrationPose(g.replayCelebrationType??g.goalCelebration??0,phase,p.dx??g.direction(p.t)):null;
     const keeperPose=p.i===0&&!pose?keeperVisual(p,g.time,g.ball,g.direction(p.t)):null;
     const x=Math.round(p.x+(pose?.dx??0)),y=Math.round(p.y+(pose?.dy??keeperPose?.dy??0));
-    const selected=!g.replayView&&id===g.selected[0],baseNumber=p.i===0?1:p.i+5,number=id===g.careerIndex?g.careerNumber:p.t===0&&baseNumber===g.careerNumber?11:baseNumber;
+    const selected=!g.replayView&&id===g.selected[0],baseNumber=p.i===0?1:p.i+5,number=g.playerNumbers?.[id]??(id===g.careerIndex?g.careerNumber:baseNumber);
     const look=id===g.careerIndex?g.careerLook:null,skin=look?.skin??SKINS[id%SKINS.length],hair=look?.hair??HAIRS[id%HAIRS.length],kit=p.i===0?(g.keeper?.[p.t]??'#f9d26c'):(g.colors?.[p.t]??(p.t===0?'#77bafd':'#fa8c76'));
     ctx.fillStyle='#122d2660';ctx.fillRect(x-10,y+8,20,5);
     if(pose?.dust){ctx.fillStyle='#b6d29e';const dir=Math.sign(pose.dx||p.dx||1);for(let n=0;n<3;n++)ctx.fillRect(x-dir*(13+n*9),y+7-(n%2)*4,4+n*2,3)}

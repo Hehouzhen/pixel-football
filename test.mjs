@@ -1,4 +1,7 @@
 import {PracticeMatch} from './practice.mjs';
+await import('./news.test.mjs');
+await import('./identity.test.mjs');
+await import('./god-mode.test.mjs');
 import {shotAdvice} from './experience.mjs';
 await import('./experience-update.test.mjs');
 await import('./career-story.test.mjs');
@@ -123,7 +126,7 @@ m=match();for(let i=0;i<25;i++)m.step(.016);assert(m.heat[5][0].some(n=>n>0));as
 assert.notEqual(careerObjective('forward',0).field,careerObjective('forward',1).field);assert(careerObjective('midfielder',0,300).target>careerObjective('midfielder',0,120).target);
 const look={skin:'#ebbd89',hair:'#302b24',hairstyle:3,shoes:'#ffffff',sleeve:'long',celebration:1};let newPlayer=createCareerPlayer('复盘测试',27,'forward',look,'finisher');
 m=match({careerIndex:5,careerNumber:27});m.kick(5,true,.8);m.goal(0);const recorded=m.report();newPlayer=finishCareerMatch(newPlayer,m.stats[5],m.score,120,{report:recorded,season:1,opponent:'测试队',objective:m.objective});assert.equal(newPlayer.history.length,1);assert(newPlayer.honors.includes('首次进球'));assert.equal(newPlayer.stats.goals,1);
-const newBackup={version:2,active:0,slots:[makeCareerSlot(createSeason(league.id,league.teams[0].id),newPlayer),null,null]};assert.deepEqual(importBackup(exportBackup(newBackup)).slots[0].player,newPlayer);
+const newBackup={version:2,active:0,slots:[makeCareerSlot(createSeason(league.id,league.teams[0].id),newPlayer),null,null]};assert.deepEqual(importBackup(exportBackup(newBackup)).slots[0].player,{...newPlayer,id:'p:arsenal:5'});
 let invalid=structuredClone(newBackup);invalid.slots[0].player.history[0].report.shots[0].x=2;assert.throws(()=>importBackup(exportBackup(invalid)));invalid=structuredClone(newBackup);invalid.slots[0].player.appearance.hairstyle=20;assert.throws(()=>importBackup(exportBackup(invalid)));
 for(let i=0;i<6;i++)newPlayer=finishCareerMatch(newPlayer,{},[0,0],120,{report:recorded});assert(newPlayer.history[0].report.heat,'career best performance retains its detailed report');assert(newPlayer.history.at(-1).report.heat);assert(recorded.heat,'history pruning must preserve the original report');
 let archivePlayer=createCareerPlayer('年鉴',27,'forward');for(let i=0;i<45;i++)archivePlayer=finishCareerMatch(archivePlayer,{goals:1},[1,0],120,{season:i<30?1:2});assert.equal(archivePlayer.history.length,45);assert.equal(archivePlayer.seasonLedger[1].appearances,30);assert.equal(archivePlayer.seasonLedger[2].goals,15);assert.equal(archivePlayer.stats.goals,45);assert.equal(archivePlayer.history.at(-1).shooting,archivePlayer.attributes.shooting);
@@ -139,7 +142,7 @@ console.log('PASS: playable style differences and league report backup validatio
 
 // Simulation advances exactly one round, preserves home/away orientation and persists totals.
 const simSeason=createSeason(league.id,league.teams[0].id,77);for(let week=0;week<2;week++){const fixture=currentFixture(simSeason),expected=simulate(...fixture,week,undefined,77);simulateWeek(simSeason);const own=simSeason.results.find(r=>r.week===week&&(r.home===simSeason.teamId||r.away===simSeason.teamId));assert.deepEqual(own.score,expected.score);assert.deepEqual(own.stats,expected.stats);assert.equal(own.source,'simulated');assert.equal(own.report,undefined);assert.equal(simSeason.week,week+1);assert.equal(simSeason.results.length,4*(week+1));assert.equal(simSeason.world.spain.results.length,4*(week+1))}
-const simulatedTotals=Object.entries(simSeason.players).filter(([id])=>id.startsWith(`${simSeason.teamId}:`)).reduce((n,[,p])=>n+p.goals,0);assert.equal(simulatedTotals,seasonSummary(simSeason).goalsFor);assert.equal(importBackup(exportBackup({version:2,active:0,slots:[makeClubSlot(simSeason),null,null]})).slots[0].season.week,2);while(currentFixture(simSeason))simulateWeek(simSeason);assert(simSeason.awards);startCup(simSeason);assert(simSeason.cup);assert.throws(()=>simulateWeek(simSeason));
+const simulatedTotals=Object.entries(simSeason.players).filter(([id])=>simSeason.rosterIds[simSeason.teamId].includes(id)).reduce((n,[,p])=>n+p.goals,0);assert.equal(simulatedTotals,seasonSummary(simSeason).goalsFor);assert.equal(importBackup(exportBackup({version:2,active:0,slots:[makeClubSlot(simSeason),null,null]})).slots[0].season.week,2);while(currentFixture(simSeason))simulateWeek(simSeason);assert(simSeason.awards);startCup(simSeason);assert(simSeason.cup);assert.throws(()=>simulateWeek(simSeason));
 console.log('PASS: one-round simulation, home/away scores, standings, player totals, backups and cup qualification.');
 
 // Player-initiated passes switch on reception; AI passes, interceptions and manual choices do not.

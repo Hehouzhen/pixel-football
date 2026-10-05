@@ -1,9 +1,11 @@
-import {LEAGUES,getTeam,fixtures,standings,simulate,orientStats,addPlayer,addSimulatedPlayers,playerRows} from './league.mjs';
+import {LEAGUES,getTeam,fixtures,standings,simulate,orientStats,addPlayer,addSimulatedPlayers,playerRows,prepareSeason} from './league.mjs';
+import {teamName} from './identity.mjs';
 
 export function startCup(season){
+  prepareSeason(season);
   if(!season.world||season.cup)return season;
   const teams=LEAGUES.flatMap(league=>standings(season,league.id).slice(0,2).map(row=>row.id));
-  season.cup={phase:'league',round:0,teams,fixtures:fixtures({teams:teams.map(id=>({id}))}).slice(0,4),results:[],players:{},names:{...season.names},semis:null,final:null,champion:null};
+  season.cup={phase:'league',round:0,teams,fixtures:fixtures({teams:teams.map(id=>({id}))}).slice(0,4),results:[],players:{},names:{...season.names},rosterIds:season.rosterIds,playerData:season.playerData,semis:null,final:null,champion:null};
   settleCup(season);
   return season;
 }
@@ -16,7 +18,7 @@ export function cupNextMatch(season){
 }
 
 export function cupStandings(season){
-  const cup=season.cup,rows=cup.teams.map(id=>({id,name:getTeam(id).name,played:0,points:0,for:0,against:0}));
+  const cup=season.cup,rows=cup.teams.map(id=>({id,name:teamName(season,id),played:0,points:0,for:0,against:0}));
   for(const {home,away,score:[h,a]} of cup.results.filter(r=>r.phase==='league')){
     const x=rows.find(row=>row.id===home),y=rows.find(row=>row.id===away);
     x.played++;y.played++;x.for+=h;x.against+=a;y.for+=a;y.against+=h;
@@ -26,11 +28,12 @@ export function cupStandings(season){
 }
 
 function playRound(season,userScore,matchStats,teamStats,shootout,report){
+  prepareSeason(season);season.cup.rosterIds=season.rosterIds;season.cup.playerData=season.playerData;
   const cup=season.cup,phase=cup.phase,round=cup.round,games=phase==='league'?cup.fixtures[round]:phase==='semi'?cup.semis:[cup.final],winners=[];
   for(const [home,away] of games){
     const own=home===season.teamId||away===season.teamId,homeIsUser=home===season.teamId,played=own&&userScore;
-    const score=played?(homeIsUser?[...userScore]:[userScore[1],userScore[0]]):simulate(home,away,round+30,undefined,season.seed??0).score;
-    const stats=played?orientStats(teamStats,homeIsUser)??simulate(home,away,round+30,score,season.seed??0).stats:simulate(home,away,round+30,score,season.seed??0).stats;
+    const score=played?(homeIsUser?[...userScore]:[userScore[1],userScore[0]]):simulate(home,away,round+30,undefined,season.seed??0,['balanced','balanced'],season).score;
+    const stats=played?orientStats(teamStats,homeIsUser)??simulate(home,away,round+30,score,season.seed??0,['balanced','balanced'],season).stats:simulate(home,away,round+30,score,season.seed??0,['balanced','balanced'],season).stats;
     let winner=null,penalties=null;
     if(phase!=='league'){
       winner=score[0]===score[1]?(played?shootout.winner:(getTeam(home).strength>=getTeam(away).strength?home:away)):(score[0]>score[1]?home:away);
