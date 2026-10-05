@@ -1,2 +1,7 @@
 node_modules/
 .sites-runtime/
+.artifacts/
+.impeccable/
+reports/
+player-motion-demo/*
+!player-motion-demo/player-chunky-adult-frames.png
