@@ -47,7 +47,21 @@ export function ensureIdentity(season,nameFor,career=null){
   }
   season.teamNames??={};
   season.godMode??=false;
-  for(const p of Object.values(season.playerData)){p.number??=p.position===0?1:p.position+5;p.attributes.speed??=initialAttributes(p.teamId,p.position).speed}
+  const tracked=[season,...Object.values(season.world??{}),season.cup].filter(Boolean);
+  for(const p of Object.values(season.playerData)){
+    p.number??=p.position===0?1:p.position+5;
+    p.attributes.speed??=initialAttributes(p.teamId,p.position).speed;
+    if(!p.careerStats){
+      const fields=['appearances','goals','assists','shots','shotsOnTarget','passes','passesCompleted','tackles','interceptions','saves','keyPasses','playingSeconds'];
+      p.careerStats=Object.fromEntries(fields.map(field=>[field,0]));
+      for(const state of tracked){
+        const stats=state.players?.[p.id];
+        if(!stats)continue;
+        for(const field of fields.slice(1))p.careerStats[field]+=stats[field]??0;
+        p.careerStats.appearances+=state.results?.filter(r=>r.home===p.teamId||r.away===p.teamId).length??0;
+      }
+    }
+  }
   if(career)career.attributes.speed??=initialAttributes(season.teamId,career.index).speed;
   if(career){
     const id=career.id??season.rosterIds[season.teamId]?.[career.index];

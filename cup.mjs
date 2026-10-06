@@ -41,8 +41,9 @@ function playRound(season,userScore,matchStats,teamStats,shootout,report){
       winners.push(winner);
     }
     cup.results.push({phase,round,home,away,score,stats,source:played?'played':'simulated',...(played&&report?{report}:{}),...(winner?{winner}:{}),...(penalties?{penalties}:{})});
-    if(played&&matchStats){const opponent=homeIsUser?away:home;for(let i=0;i<6;i++){addPlayer(cup,season.teamId,i,matchStats[i]);addPlayer(cup,opponent,i,matchStats[i+6])}}
-    else{addSimulatedPlayers(cup,home,0,score[0],stats,round+30);addSimulatedPlayers(cup,away,1,score[1],stats,round+30)}
+    const stage=phase==='league'?'league':phase==='semi'?'半决赛':'决赛',context={competition:'cup',phase:stage,round:phase==='league'?round+1:stage,scores:[score,[score[1],score[0]]]};
+    if(played&&matchStats){const opponent=homeIsUser?away:home,ours=homeIsUser?score:[score[1],score[0]];for(let i=0;i<6;i++){addPlayer(cup,season.teamId,i,matchStats[i],{competition:'cup',phase:stage,round:phase==='league'?round+1:stage,score:ours});addPlayer(cup,opponent,i,matchStats[i+6],{competition:'cup',phase:stage,round:phase==='league'?round+1:stage,score:[ours[1],ours[0]]})}}
+    else{addSimulatedPlayers(cup,home,0,score[0],stats,round+30,context);addSimulatedPlayers(cup,away,1,score[1],stats,round+30,context)}
   }
   if(phase==='league'){
     cup.round++;
