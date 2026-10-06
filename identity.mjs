@@ -9,7 +9,7 @@ export function initialAttributes(teamId,index){
   const strength=getTeam(teamId)?.strength??1;
   const base=60+Math.round((strength-1)*25);
   const variation=((index*7+teamId.length*3)%9)-4;
-  return {shooting:clamp(base+(index===5?12:index>=3?5:index===0?-22:-10)+variation),passing:clamp(base+(index===3||index===4?9:index===0?-5:0)-variation),defense:clamp(base+(index===0?3:index<=2?12:index===5?-12:0)+variation),goalkeeping:clamp(base+(index===0?18:-28)+variation)};
+  return {shooting:clamp(base+(index===5?12:index>=3?5:index===0?-22:-10)+variation),passing:clamp(base+(index===3||index===4?9:index===0?-5:0)-variation),defense:clamp(base+(index===0?3:index<=2?12:index===5?-12:0)+variation),goalkeeping:clamp(base+(index===0?18:-28)+variation),speed:clamp(base+(index===0?-18:index===5?10:3)-variation)};
 }
 
 export function createIdentity(nameFor){
@@ -47,7 +47,8 @@ export function ensureIdentity(season,nameFor,career=null){
   }
   season.teamNames??={};
   season.godMode??=false;
-  for(const p of Object.values(season.playerData))p.number??=p.position===0?1:p.position+5;
+  for(const p of Object.values(season.playerData)){p.number??=p.position===0?1:p.position+5;p.attributes.speed??=initialAttributes(p.teamId,p.position).speed}
+  if(career)career.attributes.speed??=initialAttributes(season.teamId,career.index).speed;
   if(career){
     const id=career.id??season.rosterIds[season.teamId]?.[career.index];
     if(id){career.id=id;season.playerData[id].name=career.name;season.playerData[id].number=career.number;season.playerData[id].attributes={...season.playerData[id].attributes,...career.attributes}}
@@ -82,7 +83,7 @@ export function carryIdentity(oldSeason,newSeason,career=null){
 export function rosterRating(season,teamId){
   const players=activePlayers(season,teamId);
   if(!players.length)return getTeam(teamId).strength;
-  const quality=players.reduce((sum,p)=>sum+(p.position===0?p.attributes.goalkeeping:(p.attributes.shooting+p.attributes.passing+p.attributes.defense)/3),0)/players.length;
-  const baseline=Array.from({length:6},(_,i)=>initialAttributes(teamId,i)).reduce((sum,a,i)=>sum+(i===0?a.goalkeeping:(a.shooting+a.passing+a.defense)/3),0)/6;
+  const quality=players.reduce((sum,p)=>sum+(p.position===0?p.attributes.goalkeeping:(p.attributes.shooting+p.attributes.passing+p.attributes.defense+p.attributes.speed)/4),0)/players.length;
+  const baseline=Array.from({length:6},(_,i)=>initialAttributes(teamId,i)).reduce((sum,a,i)=>sum+(i===0?a.goalkeeping:(a.shooting+a.passing+a.defense+a.speed)/4),0)/6;
   return getTeam(teamId).strength+(quality-baseline)/100;
 }

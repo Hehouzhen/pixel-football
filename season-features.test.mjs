@@ -1,0 +1,48 @@
+import assert from 'node:assert/strict';
+import {createSeason,simulateWeek,seasonRounds} from './league.mjs';
+import {startCup} from './cup.mjs';
+import {finances,offers,sign,windowState} from './transfers.mjs';
+import {ceremony,nextCeremony} from './awards.mjs';
+import {Match} from './engine.mjs';
+import {makeClubSlot,exportBackup,importBackup} from './save-slots.mjs';
+
+let season=createSeason('england','arsenal',17);
+const first=offers(season).find(o=>o.position===5&&o.allowed&&o.fee<=finances(season).balance);
+assert(first);
+const original=season.rosterIds.arsenal[5],before=finances(season).balance;
+season=sign(season,first.id);
+assert.equal(season.rosterIds.arsenal[5],first.id);
+assert.equal(season.rosterIds[first.from][5],original);
+assert.equal(season.playerData[first.id].teamId,'arsenal');
+assert.equal(finances(season).balance,+(before-first.fee).toFixed(1));
+assert.equal(windowState(season).remaining,1);
+assert.equal(importBackup(exportBackup({version:2,active:0,slots:[makeClubSlot(season),null,null]})).slots[0].season.rosterIds.arsenal[5],first.id);
+const second=offers(season).find(o=>o.position===3&&o.allowed&&o.fee<=finances(season).balance);
+assert(second);
+season=sign(season,second.id);
+assert.equal(windowState(season).remaining,0);
+assert.throws(()=>sign(season,offers(season)[0].id));
+for(let i=0;i<7;i++)simulateWeek(season);
+assert.equal(windowState(season).kind,'winter');
+assert.equal(windowState(season).remaining,1);
+const winter=offers(season).find(o=>o.allowed&&o.fee<=finances(season).balance);
+assert(winter);
+season=sign(season,winter.id);
+assert.equal(windowState(season).remaining,0);
+for(let i=7;i<seasonRounds(season);i++)simulateWeek(season);
+assert.equal(nextCeremony(season),'league');
+const league=ceremony(season,'league');
+assert.equal(league.awards.length,6);
+assert.equal(league.lineup.length,6);
+season.seenAwards=['league'];
+startCup(season);
+if(season.cup.phase!=='complete')season.cup.phase='complete';
+season.cup.champion??=season.cup.teams[0];
+assert.equal(nextCeremony(season),'europe');
+const europe=ceremony(season,'europe');
+assert.equal(europe.awards.length,6);
+assert.equal(europe.lineup.length,6);
+
+function distanceAt(speed){const attrs=Array.from({length:12},()=>({shooting:60,passing:60,defense:60,goalkeeping:60,speed:60}));attrs[5].speed=speed;const match=new Match({duration:180,playerAttributes:attrs});match.state='playing';match.wait=0;match.kickoffId=null;const start=match.players[5].x;match.step(.016,[{x:1,y:0},{}]);return match.players[5].x-start}
+assert(distanceAt(95)>distanceAt(30)*1.3,'速度能力应明显影响实际跑动');
+console.log('PASS: transfer budgets and stable IDs, window limits, both award ceremonies and live speed.');

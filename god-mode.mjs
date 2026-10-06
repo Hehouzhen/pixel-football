@@ -1,8 +1,8 @@
 import {LEAGUES,getTeam,leagueAwards,playerRows} from './league.mjs';
 import {teamName} from './identity.mjs';
 
-export const ABILITIES=['shooting','passing','defense','goalkeeping'];
-export const ABILITY_LABELS={shooting:'射门',passing:'传球',defense:'防守',goalkeeping:'守门'};
+export const ABILITIES=['shooting','passing','defense','goalkeeping','speed'];
+export const ABILITY_LABELS={shooting:'射门',passing:'传球',defense:'防守',goalkeeping:'守门',speed:'速度'};
 export const STAT_FIELDS=['goals','assists','shots','shotsOnTarget','passes','passesCompleted','crosses','crossesCompleted','tackles','tackleAttempts','interceptions','keyPasses','saves','fouls','yellows','reds','blocks','turnovers','headers','bicycles','headerGoals','bicycleGoals','penaltyGoals','forwardPasses','touches','playingSeconds','distance','carryDistance','possession'];
 export const STAT_LABELS={goals:'进球',assists:'助攻',shots:'射门',shotsOnTarget:'射正',passes:'传球',passesCompleted:'成功传球',crosses:'传中',crossesCompleted:'成功传中',tackles:'成功抢断',tackleAttempts:'抢断尝试',interceptions:'拦截',keyPasses:'关键传球',saves:'扑救',fouls:'犯规',yellows:'黄牌',reds:'红牌',blocks:'封堵',turnovers:'丢失球权',headers:'头球',bicycles:'倒钩',headerGoals:'头球进球',bicycleGoals:'倒钩进球',penaltyGoals:'点球进球',forwardPasses:'向前传球',touches:'触球',playingSeconds:'上场秒数',distance:'跑动距离',carryDistance:'带球距离',possession:'控球秒数'};
 export const POSITION_LABELS=['门将','后卫','后卫','中场','中场','前锋'];
@@ -31,7 +31,7 @@ export function editPlayer(season,career,id,change){assertGod(season);const next
   if(oldTeam!==teamId){const from=seasonState(next,teamLeague(oldTeam)),to=seasonState(next,teamLeague(teamId));if(from!==to){const original=from.players[id],swapped=to.players[targetId];delete from.players[id];delete to.players[targetId];if(original)to.players[id]=original;if(swapped)from.players[targetId]=swapped}}
   checkNumber(next,teamId,id,number);if(targetId!==id)checkNumber(next,oldTeam,targetId,next.playerData[targetId].number);
   for(const state of [next,...Object.values(next.world??{}),next.cup].filter(Boolean)){delete state.names?.[`${oldTeam}:${oldPosition}`];delete state.names?.[`${teamId}:${position}`]}
-  if(updatedCareer?.id===id){updatedCareer.name=name;updatedCareer.number=number;updatedCareer.attributes={shooting:attributes.shooting,passing:attributes.passing,defense:attributes.defense};updatedCareer.index=position;updatedCareer.position=position===1?'defender':position===3?'midfielder':'forward';if(teamId!==oldTeam)next.teamId=teamId}
+  if(updatedCareer?.id===id){updatedCareer.name=name;updatedCareer.number=number;updatedCareer.attributes={shooting:attributes.shooting,passing:attributes.passing,defense:attributes.defense,speed:attributes.speed};updatedCareer.index=position;updatedCareer.position=position===1?'defender':position===3?'midfielder':'forward';if(teamId!==oldTeam)next.teamId=teamId}
   syncIdentity(next);log(next,'player',`${id} · ${p.name} · ${teamName(next,teamId)}`);return {season:next,career:updatedCareer};
 }
 

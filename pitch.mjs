@@ -29,8 +29,8 @@ export function draw(ctx,g){const f=FIELD;ctx.imageSmoothingEnabled=false;ctx.fi
     const rotation=pose?.rotation??(recentKick&&p.kickType==='bicycle'?-.95:0);
     if(keeperPose)drawKeeper(ctx,{x,y,pose:keeperPose.pose,side:keeperPose.side,flip:keeperPose.flip,kit,skin,hair});
     else drawSprite(ctx,{x,y,row,col,kit,skin,hair,shoes:look?.shoes??'#f47b28',hairstyle:look?.hairstyle??0,sleeve:look?.sleeve??'short',flip:pose?.flip??((p.dx??g.direction(p.t))<0),rotation,scaleX:pose?.scaleX??1,scaleY:pose?.scaleY??1,back:pose?.back??false,backNumber:number,gloves:p.i===0?'#eefaf2':null,size:p.i===0?46:44});
-    if(!rotation&&(!pose||pose.scaleX>.7&&pose.scaleY>.8)){ctx.font='bold 8px monospace';ctx.textAlign='center';ctx.fillStyle=g.numberInk?.[p.t]??'#fafbec';ctx.fillText(String(number),x,y-3)}
-    if(selected){ctx.fillStyle='#ecffd5';ctx.font='bold 12px monospace';ctx.fillText(`${number}号`,x,y-41);ctx.fillStyle='#17341d';ctx.fillRect(x-12,y+15,24,3);ctx.fillStyle='#caff70';ctx.fillRect(x-12,y+15,24*p.stamina,3)}
+    if(!rotation&&(!pose||pose.scaleX>.7&&pose.scaleY>.8)){ctx.font='900 10px Impact, Arial Narrow, sans-serif';ctx.textAlign='center';ctx.fillStyle=g.numberInk?.[p.t]??'#fafbec';ctx.fillText(String(number),x,y-3)}
+    if(selected){ctx.fillStyle='#ecffd5';ctx.font='900 13px Impact, Arial Narrow, sans-serif';ctx.fillText(`${number}号`,x,y-41);ctx.fillStyle='#17341d';ctx.fillRect(x-12,y+15,24,3);ctx.fillStyle='#caff70';ctx.fillRect(x-12,y+15,24*p.stamina,3)}
     if(g.stats[id].yellows){ctx.fillStyle='#ffe273';ctx.fillRect(x+11,y-25,5,8)}
   }
   if(!g.replayView&&g.charge>0){ctx.fillStyle='#14251c';ctx.fillRect(player.x-18,player.y+23,36,5);ctx.fillStyle='#d5ff78';ctx.fillRect(player.x-18,player.y+23,36*g.charge,5)}

@@ -1,6 +1,6 @@
 import {advanceClubRole,roleProgress} from './career-role.mjs';
 import {objectiveFor,milestones,STYLES} from './experience.mjs';
-const POSITION={forward:{label:'前锋',index:5,primary:'shooting',attributes:{shooting:70,passing:58,defense:50}},midfielder:{label:'中场',index:3,primary:'passing',attributes:{shooting:58,passing:70,defense:56}},defender:{label:'后卫',index:1,primary:'defense',attributes:{shooting:52,passing:58,defense:70}}};
+const POSITION={forward:{label:'前锋',index:5,primary:'shooting',attributes:{shooting:70,passing:58,defense:50,speed:74}},midfielder:{label:'中场',index:3,primary:'passing',attributes:{shooting:58,passing:70,defense:56,speed:68}},defender:{label:'后卫',index:1,primary:'defense',attributes:{shooting:52,passing:58,defense:70,speed:63}}};
 const FIELDS=['goals','assists','shots','shotsOnTarget','passes','passesCompleted','crosses','tackles','touches','fouls','yellows','reds','distance','possession','headers','bicycles','forwardPasses','interceptions','tackleAttempts','playingSeconds','keyPasses','blocks','turnovers','crossesCompleted','carryDistance','headerGoals','bicycleGoals','penaltyGoals'];
 const clamp=(value,min,max)=>Math.max(min,Math.min(max,value));
 

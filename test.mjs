@@ -7,6 +7,7 @@ await import('./experience-update.test.mjs');
 await import('./career-story.test.mjs');
 await import('./career-role.test.mjs');
 await import('./tactics.test.mjs');
+await import('./season-features.test.mjs');
 import assert from 'node:assert/strict';
 import {Match, FIELD, keeperMistakeChance, shootoutWinner} from './engine.mjs';
 import {keeperVisual} from './keeper-motion.mjs';

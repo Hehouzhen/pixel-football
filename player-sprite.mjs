@@ -65,5 +65,5 @@ export function drawPortrait(canvas,{kit,skin,hair,shoes,hairstyle=0,sleeve='sho
   const sprite=frame(0,1,kit,skin,hair,shoes,hairstyle,sleeve);if(!sprite)return;
   ctx.imageSmoothingEnabled=false;ctx.fillStyle='#080f1788';ctx.beginPath();ctx.ellipse(60,165,37,7,0,0,Math.PI*2);ctx.fill();
   ctx.drawImage(sprite,60-sprite.anchorX/64*172,166-sprite.footY/64*172,172,172);
-  ctx.font='900 14px monospace';ctx.textAlign='center';ctx.fillStyle=ink;ctx.fillText(String(number),60,111);
+  ctx.font='900 17px Impact, Arial Narrow, sans-serif';ctx.textAlign='center';ctx.fillStyle=ink;ctx.fillText(String(number),60,111);
 }
