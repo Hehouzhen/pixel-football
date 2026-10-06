@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {createSeason,simulateWeek,seasonRounds} from './league.mjs';
+import {LEAGUES,createSeason,simulateWeek,seasonRounds} from './league.mjs';
 import {startCup} from './cup.mjs';
 import {finances,offers,sign,windowState} from './transfers.mjs';
 import {ceremony,nextCeremony} from './awards.mjs';
@@ -42,6 +42,11 @@ assert.equal(nextCeremony(season),'europe');
 const europe=ceremony(season,'europe');
 assert.equal(europe.awards.length,6);
 assert.equal(europe.lineup.length,6);
+const foreign=season.cup.teams.find(id=>!LEAGUES.find(l=>l.id===season.leagueId).teams.some(t=>t.id===id));
+const foreignLeague=LEAGUES.find(l=>l.teams.some(t=>t.id===foreign)).id,foreignId=season.rosterIds[foreign][5];
+season.cup.players[foreignId]={goals:1};
+season.world[foreignLeague].players[foreignId]={goals:100};
+assert.equal(ceremony(season,'europe').awards[1][1],season.playerData[foreignId].name,'金球奖须计算其他联赛的球员表现');
 
 function distanceAt(speed){const attrs=Array.from({length:12},()=>({shooting:60,passing:60,defense:60,goalkeeping:60,speed:60}));attrs[5].speed=speed;const match=new Match({duration:180,playerAttributes:attrs});match.state='playing';match.wait=0;match.kickoffId=null;const start=match.players[5].x;match.step(.016,[{x:1,y:0},{}]);return match.players[5].x-start}
 assert(distanceAt(95)>distanceAt(30)*1.3,'速度能力应明显影响实际跑动');
