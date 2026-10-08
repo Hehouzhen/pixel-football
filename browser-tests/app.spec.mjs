@@ -3,7 +3,9 @@ import {build} from 'esbuild';
 import {mkdirSync} from 'node:fs';
 import {createSeason,leagueAwards} from '../league.mjs';
 import {startCup} from '../cup.mjs';
-import {makeClubSlot,SAVE_KEY,saveSaveData} from '../save-slots.mjs';
+import {makeClubSlot,makeCareerSlot,SAVE_KEY,saveSaveData} from '../save-slots.mjs';
+import {prepareSeason} from '../league.mjs';
+import {createCareerPlayer} from '../career.mjs';
 import {buildFullSeason} from '../season-loop.test.mjs';
 
 test('俱乐部创建、模拟、保存恢复及主要数据页面',async({page})=>{
@@ -90,6 +92,41 @@ test('6MB 完整赛季可压缩保存、重载并继续流程',async({page})=>{
   await page.getByRole('button',{name:/继续赛季/}).click();
   await expect(page.getByRole('heading',{name:'俱乐部'})).toBeVisible();
   await expect(page.getByText('本赛季赛事已完成')).toBeVisible();
+});
+
+test('俱乐部与 MyCareer 的赛季总结、休赛期和新赛季开幕可恢复',async({page})=>{
+  const season=buildFullSeason(),careerSeason=structuredClone(season),career=createCareerPlayer('赛季闭环球员',10,'forward');
+  season.seenAwards=['league','europe'];careerSeason.seenAwards=['league','europe'];prepareSeason(careerSeason,career);
+  const data={version:2,active:0,slots:[makeClubSlot(season),makeCareerSlot(careerSeason,career),null]},storage={value:null,setItem(key,value){this.value=value}};
+  saveSaveData(data,storage);
+  await page.addInitScript(({key,value})=>localStorage.setItem(key,value),{key:SAVE_KEY,value:storage.value});
+  await page.goto('/');await page.getByRole('button',{name:/继续俱乐部/}).click();
+  await expect(page.getByText(/SEASON REVIEW/)).toBeVisible();
+  await page.getByRole('button',{name:/进入休赛期并生成新赛季/}).click();
+  await expect(page.getByRole('heading',{name:'新赛季开幕'})).toBeVisible();
+  await page.setViewportSize({width:390,height:844});
+  await expect.poll(()=>page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBe(true);
+  await page.setViewportSize({width:1280,height:900});
+  await expect(page.getByText(/休赛期动态/)).toBeVisible();
+  await page.getByRole('button',{name:'首页'}).click();
+  await page.getByRole('button',{name:/继续俱乐部/}).click();
+  await expect(page.getByRole('heading',{name:'新赛季开幕'})).toBeVisible();
+  await page.getByRole('button',{name:/开始新赛季/}).click();
+  await expect(page.getByRole('heading',{name:'俱乐部'})).toBeVisible();
+  await expect(page.locator('.club-heading .club-copy')).toContainText('第 1 / 30 轮');
+  await page.getByRole('button',{name:'首页'}).click();
+  await page.getByText('管理本地存档与备份').click();
+  await page.getByRole('button',{name:'打开存档'}).nth(1).click();
+  await expect(page.getByText(/SEASON REVIEW/)).toBeVisible();
+  await expect(page.getByText('赛季答卷')).toBeVisible();
+  await page.getByRole('button',{name:/留队并进入休赛期/}).click();
+  await expect(page.getByRole('heading',{name:'新赛季开幕'})).toBeVisible();
+  await page.getByRole('button',{name:'首页'}).click();
+  await page.getByRole('button',{name:/继续生涯/}).click();
+  await expect(page.getByRole('heading',{name:'新赛季开幕'})).toBeVisible();
+  await page.getByRole('button',{name:/开始新赛季/}).click();
+  await expect(page.getByRole('heading',{name:'MyCareer'})).toBeVisible();
+  await expect(page.getByText(/NEXT MATCH \/ 第 1 轮/)).toBeVisible();
 });
 
 test('MyCareer 创建后刷新仍能恢复球员档案',async({page})=>{
