@@ -1,8 +1,11 @@
 import {STYLES} from './experience.mjs';
 import {LEAGUES,getLeague,getTeam,seasonRounds,leagueAwards,seasonRecords,prepareSeason} from './league.mjs';
+import LZString from 'lz-string';
 
 export const SAVE_KEY='pixel-pitch-saves-v2';
 export const LEGACY_KEY='pixel-pitch-season-v1';
+export const MAX_BACKUP_SIZE=64*1024*1024;
+const COMPRESSED_PREFIX='lz:';
 
 function validMove(move){return !!move&&typeof move.eventId==='string'&&move.eventId.length<=160&&typeof move.playerId==='string'&&move.playerId.length<=120&&Number.isInteger(move.year)&&move.year>=1900&&move.year<=9999&&Number.isInteger(move.season)&&move.season>=1&&!!getTeam(move.from)&&!!getTeam(move.to)&&typeof move.fromName==='string'&&move.fromName.length<=100&&typeof move.toName==='string'&&move.toName.length<=100}
 function validWorldOffseason(row){return !!row&&Number.isInteger(row.year)&&row.year>=1900&&row.year<=9999&&Number.isInteger(row.season)&&row.season>=1&&typeof row.marketOpened==='boolean'&&Number.isInteger(row.nextMarketYear)&&row.nextMarketYear>=row.year&&row.nextMarketYear<=row.year+4&&Array.isArray(row.retirements)&&row.retirements.length<=100&&row.retirements.every(item=>typeof item.id==='string'&&item.id.length<=120&&typeof item.name==='string'&&item.name.length<=100&&!!getTeam(item.teamId)&&Number.isInteger(item.age)&&item.age>=15&&item.age<=99&&Number.isInteger(item.year)&&item.year>=1900&&typeof item.replacementId==='string'&&item.replacementId.length<=120)&&Array.isArray(row.transfers)&&row.transfers.length<=LEAGUES.length&&row.transfers.every(event=>typeof event.eventId==='string'&&event.eventId.length<=160&&!!getLeague(event.leagueId)&&!!getTeam(event.from)&&!!getTeam(event.to)&&Array.isArray(event.players)&&event.players.length===2&&event.players.every(name=>typeof name==='string'&&name.length<=100)&&Array.isArray(event.moves)&&event.moves.length===2&&event.moves.every(validMove))&&row.development&&['aged','improved','declined'].every(key=>Number.isInteger(row.development[key])&&row.development[key]>=0&&row.development[key]<=1000)}
@@ -17,7 +20,7 @@ function blank(){return {version:2,active:null,slots:[null,null,null]}}
 
 export function loadSaveData(storage=localStorage){
   try{
-    const saved=JSON.parse(storage.getItem(SAVE_KEY));
+    const raw=storage.getItem(SAVE_KEY),serialized=raw?.startsWith(COMPRESSED_PREFIX)?LZString.decompressFromBase64(raw.slice(COMPRESSED_PREFIX.length)):raw,saved=JSON.parse(serialized);
     if(saved?.version===2&&Array.isArray(saved.slots)){
       const slots=Array.from({length:3},(_,index)=>{const slot=saved.slots[index];if(validSeason(slot?.season)&&(slot.mode==='club'||slot.mode==='career'&&validCareer(slot.player))){prepareSeason(slot.season,slot.player);return slot}return null});
       const active=Number.isInteger(saved.active)&&slots[saved.active]?saved.active:null;
@@ -35,11 +38,11 @@ export function loadSaveData(storage=localStorage){
 
 export function makeClubSlot(season,difficulty=1,duration=180,now=Date.now()){return {mode:'club',season,difficulty,duration,createdAt:now,updatedAt:now}}
 export function makeCareerSlot(season,player,difficulty=1,duration=180,now=Date.now()){return {mode:'career',season,player,difficulty,duration,createdAt:now,updatedAt:now}}
-export function saveSaveData(data,storage=localStorage){storage.setItem(SAVE_KEY,JSON.stringify(data))}
+export function saveSaveData(data,storage=localStorage){storage.setItem(SAVE_KEY,COMPRESSED_PREFIX+LZString.compressToBase64(JSON.stringify(data)))}
 
 export function exportBackup(data){return JSON.stringify({version:2,active:data.active,slots:data.slots})}
 export function importBackup(text){
-  if(typeof text!=='string'||text.length>8000000)throw new Error('存档文件过大');
+  if(typeof text!=='string'||text.length>MAX_BACKUP_SIZE)throw new Error('存档文件过大');
   let data;try{data=JSON.parse(text)}catch{throw new Error('文件不是有效的存档 JSON')}
   if(data?.version!==2||!Array.isArray(data.slots)||data.slots.length!==3)throw new Error('存档版本或存档槽数量不正确');
   const object=o=>o&&typeof o==='object'&&!Array.isArray(o);

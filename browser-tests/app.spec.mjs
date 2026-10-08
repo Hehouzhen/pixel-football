@@ -3,7 +3,8 @@ import {build} from 'esbuild';
 import {mkdirSync} from 'node:fs';
 import {createSeason,leagueAwards} from '../league.mjs';
 import {startCup} from '../cup.mjs';
-import {makeClubSlot,SAVE_KEY} from '../save-slots.mjs';
+import {makeClubSlot,SAVE_KEY,saveSaveData} from '../save-slots.mjs';
+import {buildFullSeason} from '../season-loop.test.mjs';
 
 test('俱乐部创建、模拟、保存恢复及主要数据页面',async({page})=>{
   const pageErrors=[];
@@ -76,6 +77,21 @@ test('完整联赛与欧冠颁奖流程可打开并适配窄屏',async({page})=>
   await page.screenshot({path:'test-results/europe-awards-mobile.png',fullPage:true});
 });
 
+test('6MB 完整赛季可压缩保存、重载并继续流程',async({page})=>{
+  const season=buildFullSeason(),data={version:2,active:0,slots:[makeClubSlot(season),null,null]},storage={value:null,setItem(key,value){this.value=value}};
+  saveSaveData(data,storage);
+  expect(storage.value.length).toBeLessThan(5*1024*1024);
+  await page.addInitScript(({key,value})=>localStorage.setItem(key,value),{key:SAVE_KEY,value:storage.value});
+  await page.goto('/');
+  await page.getByRole('button',{name:/继续俱乐部/}).click();
+  await expect(page.getByRole('heading',{name:'联赛年度颁奖典礼'})).toBeVisible();
+  await page.getByRole('button',{name:/继续赛季/}).click();
+  await expect(page.getByRole('heading',{name:'欧洲足球年度颁奖典礼'})).toBeVisible();
+  await page.getByRole('button',{name:/继续赛季/}).click();
+  await expect(page.getByRole('heading',{name:'俱乐部'})).toBeVisible();
+  await expect(page.getByText('本赛季赛事已完成')).toBeVisible();
+});
+
 test('MyCareer 创建后刷新仍能恢复球员档案',async({page})=>{
   const pageErrors=[];
   page.on('pageerror',error=>pageErrors.push(error.message));
@@ -91,6 +107,9 @@ test('MyCareer 创建后刷新仍能恢复球员档案',async({page})=>{
   await page.getByRole('button',{name:/继续生涯/}).click();
   await expect(page.getByRole('heading',{name:'MyCareer'})).toBeVisible();
   await expect(page.getByText('QA 测试球员').first()).toBeVisible();
+  await page.getByRole('button',{name:/模拟本场比赛/}).click();
+  await expect(page.getByRole('heading',{name:'上一场表现 · 模拟'})).toBeVisible();
+  await expect(page.getByText('第 2 / 30 轮')).toBeVisible();
   expect(pageErrors).toEqual([]);
 });
 

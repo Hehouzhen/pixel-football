@@ -4,8 +4,10 @@
 
 ## 2026-10-08 本地审查状态
 
-- 本轮功能改动已提交到本地 `main`。推送 `github` 远端时连接 GitHub 超时，远端是否已更新尚未确认；续接时先检查 `git status` 和 `git log`，核对 `github/main` 后再推送，切勿推送到内部 `origin`。
-- 最近验证：Node 逻辑测试与 Playwright Chromium 页面测试由 `npm test` 一并运行。浏览器测试使用各测试独立的临时浏览器上下文，覆盖俱乐部创建、模拟推进和刷新恢复、统计/动态世界/欧冠/历史/God Mode 导航、MyCareer 创建恢复、390px 小屏布局溢出，以及故障兜底。CI 在测试前安装 Chromium。
+- 完整赛季闭环已核验：五大联赛 1,200 场（管理联赛 240、其余联赛 960），欧冠 53 场；比分与逐场球员进球、跨赛事生涯出场/进球账本相符，赛季奖项、球员荣誉和完成后存档可往返读取。
+- 真实完整赛季存档 JSON 约 6.2 MB，已改用 LZ 压缩写入本地存储，测试压缩后约 0.93 MB；仍兼容旧的未压缩存档。两份完整赛季组成的约 12.5 MB JSON 备份可以导入，备份大小上限提高至 64 MiB。
+- `npm test` 运行 Node 逻辑/赛季闭环测试和 Playwright Chromium 页面测试。浏览器使用隔离上下文，覆盖俱乐部创建、模拟推进和刷新恢复、主要数据页、赛后新闻、联赛/欧冠颁奖、6 MB 完整赛季压缩存档载入、MyCareer 创建恢复、390px 小屏和错误兜底。CI 在测试前安装 Chromium。
+- 本地 GitHub 推送曾因网络连接超时失败；当前本地提交与 `github/main` 的差异需要在网络可用时复核。只推送到公开 `github` 远端，切勿推送到内部 `origin`。
 - 新增页面级错误兜底：React 渲染异常显示恢复提示，而不是留下空白页面。它无法捕获事件回调中的所有异常；继续检查浏览器控制台。
 - 网页存档按来源地址隔离。不同端口、GitHub Pages 和其他域名的存档不会自动同步；旧版存档导入新版本前先导出备份。
 
@@ -36,7 +38,8 @@
 - `pitch.mjs`：比赛 Canvas 绘制；`player-sprite.mjs`、`keeper-sprite.mjs`、`keeper-motion.mjs`、`celebration.mjs`：像素球员及动作。
 - `league.mjs`、`clubs.mjs`、`cup.mjs`：联赛、球队和杯赛；`career.mjs`、`career-story.mjs`：个人生涯。
 - `replay.mjs`、`replay.jsx`：进球回放；`practice.mjs`、`practice.jsx`：训练场。
-- `save-slots.mjs`：三个本地存档槽与 JSON 备份，存储键 `pixel-pitch-saves-v2`。
+- `save-slots.mjs`：三个压缩本地存档槽与 JSON 备份，读取时兼容旧版明文存档，存储键 `pixel-pitch-saves-v2`。
+- `season-loop.test.mjs`：五大联赛完整赛季、欧冠、球员账本、赛季奖项和存档往返测试。
 - `build.mjs` 将 `src.jsx` 打包为 `dist/app.js`；`dist/index.html` 使用相对路径加载脚本和样式，适配 GitHub Pages 项目子路径。
 - `playwright.config.mjs` 使用临时本地预览服务运行 `browser-tests/`；测试浏览器上下文隔离，不读取常用 Edge/Codex 浏览器配置或存档。
 - 修改后至少运行 `npm test` 和 `npm run build`；`npm test` 同时运行 Node 逻辑测试与 Playwright Chromium 页面测试。新环境首次运行需执行 `npx playwright install chromium`。涉及交互或动画时再打开实际比赛画面检查。不要只凭构建成功判断玩法正确。
