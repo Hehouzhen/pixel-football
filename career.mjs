@@ -1,6 +1,7 @@
 import {advanceClubRole,roleProgress} from './career-role.mjs';
 import {objectiveFor,milestones,STYLES} from './experience.mjs';
-const POSITION={forward:{label:'前锋',index:5,primary:'shooting',attributes:{shooting:70,passing:58,defense:50,speed:74}},midfielder:{label:'中场',index:3,primary:'passing',attributes:{shooting:58,passing:70,defense:56,speed:68}},defender:{label:'后卫',index:1,primary:'defense',attributes:{shooting:52,passing:58,defense:70,speed:63}}};
+import {LEAGUES} from './clubs.mjs';
+const POSITION={forward:{label:'前锋',index:5,primary:'shooting',attributes:{shooting:70,passing:58,defense:50,shielding:66,speed:74,firstTouch:70,endurance:67,aerial:72}},midfielder:{label:'中场',index:3,primary:'passing',attributes:{shooting:58,passing:70,defense:56,shielding:64,speed:68,firstTouch:72,endurance:74,aerial:55}},defender:{label:'后卫',index:1,primary:'defense',attributes:{shooting:52,passing:58,defense:70,shielding:60,speed:63,firstTouch:59,endurance:70,aerial:75}}};
 const FIELDS=['goals','assists','shots','shotsOnTarget','passes','passesCompleted','crosses','tackles','touches','fouls','yellows','reds','distance','possession','headers','bicycles','forwardPasses','interceptions','tackleAttempts','playingSeconds','keyPasses','blocks','turnovers','crossesCompleted','carryDistance','headerGoals','bicycleGoals','penaltyGoals'];
 const clamp=(value,min,max)=>Math.max(min,Math.min(max,value));
 
@@ -12,7 +13,7 @@ export function createCareerPlayer(name,number,position,appearance={skin:'#ebbd8
   if(!config)throw new Error('Unknown position');
   const clean=String(name).trim().slice(0,10);
   if(!clean)throw new Error('Player name is required');
-  return {style:STYLES[position].some(s=>s.id===style)?style:null,bio:'',history:[],honors:[],name:clean,number:clamp(Math.round(Number(number)||10),2,99),position,index:config.index,appearance,level:1,xp:0,attributes:{...config.attributes},stats:{appearances:0,wins:0,draws:0,losses:0,ratingTotal:0,...Object.fromEntries(FIELDS.map(field=>[field,0]))},lastMatch:null};
+  return {style:STYLES[position].some(s=>s.id===style)?style:null,bio:'',history:[],transferHistory:[],honors:[],name:clean,number:clamp(Math.round(Number(number)||10),2,99),position,index:config.index,appearance,age:18,potential:86,trainingPoints:0,level:1,xp:0,attributes:{...config.attributes},stats:{appearances:0,wins:0,draws:0,losses:0,ratingTotal:0,...Object.fromEntries(FIELDS.map(field=>[field,0]))},lastMatch:null};
 }
 
 export const careerObjective=(position,round=0,duration=180)=>objectiveFor(position,round,duration);
@@ -24,17 +25,47 @@ export function ratingBreakdown(stat={},score=[0,0],position='forward'){
 export const playerRating=(stat,score,position)=>ratingBreakdown(stat,score,position).rating;
 export function levelProgress(player){const target=Math.min(300,100+Math.max(0,player.level-5)*15),value=player.progressXp??player.xp%100;return {value,target,remaining:target-value,percent:value/target*100}}
 
+const POSITION_WEIGHTS={forward:{shooting:.28,speed:.18,firstTouch:.16,shielding:.12,passing:.1,endurance:.08,aerial:.06,defense:.02},midfielder:{passing:.25,firstTouch:.18,endurance:.16,speed:.12,shielding:.1,shooting:.08,defense:.07,aerial:.04},defender:{defense:.25,aerial:.17,speed:.12,endurance:.12,passing:.1,shielding:.09,firstTouch:.08,shooting:.07}};
+const roleRating=(attributes,position)=>Object.entries(POSITION_WEIGHTS[position]??POSITION_WEIGHTS.forward).reduce((sum,[key,weight])=>sum+(attributes?.[key]??60)*weight,0);
+const scheduleHash=text=>{let value=2166136261;for(const char of String(text)){value^=char.charCodeAt(0);value=Math.imul(value,16777619)}return value>>>0};
+export function careerTransferWindow(career,season){
+  const currentSeason=(season?.history?.length??0)+1,seed=career?.id??`${career?.name??'player'}:${career?.position??''}:${career?.number??0}`;
+  let nextSeason=2+scheduleHash(seed)%3,cycle=1;
+  while(nextSeason<currentSeason)nextSeason+=2+scheduleHash(`${seed}:${cycle++}`)%3;
+  return {available:nextSeason===currentSeason,currentSeason,nextSeason,yearsUntil:nextSeason-currentSeason};
+}
+export function careerTransferOffers(career,season){
+  const currentId=season?.teamId,index=career?.index;if(!career||!currentId||!Number.isInteger(index))return [];
+  if(!careerTransferWindow(career,season).available)return [];
+  const playerQuality=roleRating(career.attributes,career.position),seasonNumber=(season.history?.length??0)+1,seasonRows=(career.history??[]).filter(row=>row.season===seasonNumber),ledger=career.seasonLedger?.[String(seasonNumber)],appearances=ledger?.appearances??seasonRows.length,ratingTotal=ledger?.ratingTotal??seasonRows.reduce((sum,row)=>sum+(row.rating??0),0),goals=ledger?.goals??seasonRows.reduce((sum,row)=>sum+(row.goals??0),0),assists=ledger?.assists??seasonRows.reduce((sum,row)=>sum+(row.assists??0),0),form=appearances?Math.max(-2,Math.min(3,(ratingTotal/appearances-6)*1.2+goals/appearances*.3+assists/appearances*.25)):0;
+  const candidates=LEAGUES.flatMap(league=>league.teams.map(team=>({league,team}))).filter(({team})=>team.id!==currentId).map(({league,team})=>{
+    const incumbentId=season.rosterIds?.[team.id]?.[index],incumbent=season.playerData?.[incumbentId],incumbentQuality=roleRating(incumbent?.attributes,career.position),gap=playerQuality-incumbentQuality;
+    return {leagueId:league.id,leagueName:league.name,teamId:team.id,teamName:season.teamNames?.[team.id]??team.name,strength:team.strength,gap,incumbentQuality,score:gap*2.4+team.strength*8+form};
+  }).filter(offer=>offer.gap>=-7||appearances>=8&&form>=.8);
+  const shortlist=[];
+  for(const group of [candidates.slice().sort((a,b)=>b.gap-a.gap||b.strength-a.strength),candidates.filter(offer=>offer.gap>=-12||form>=.8).sort((a,b)=>b.strength-a.strength||b.gap-a.gap),candidates.slice().sort((a,b)=>b.score-a.score)]){
+    const next=group.find(offer=>!shortlist.some(row=>row.teamId===offer.teamId));if(next)shortlist.push(next);if(shortlist.length===3)break;
+  }
+  return shortlist.map(offer=>{
+    const expectedRole=offer.gap>=7?'核心主力':offer.gap>=1?'首发竞争者':offer.gap>=-4?'轮换球员':'阵容补强';
+    const positionName=career.position==='forward'?'前锋':career.position==='midfielder'?'中场':'后卫';
+    const rationale=offer.gap>=1?`球队${positionName}位置需要竞争，你的匹配能力高于现有首发 ${Math.round(offer.gap)} 点。`:form>=.8?'你本赛季的稳定表现引起了球队关注。':`球队希望增加${positionName}位置的阵容深度。`;
+    const ambition=offer.strength>=1.12?'争冠级阵容':offer.strength>=1.06?'强队阵容':offer.strength>=1.01?'中游阵容':'成长型阵容';
+    return {teamId:offer.teamId,leagueId:offer.leagueId,teamName:offer.teamName,leagueName:offer.leagueName,expectedRole,ambition,rationale};
+  });
+}
+
 // Spatial snapshots are bounded separately from season totals and recent full reports.
 export function memoryOf(row,reasons=['我的收藏']){const report=row.report?structuredClone(row.report):null;if(report)delete report.heat;return {matchId:row.matchId,season:row.season,competition:row.competition,opponent:row.opponent,score:[...row.score],rating:row.rating,goals:row.goals,assists:row.assists,reasons,report}}
 export function toggleMatchMemory(player,matchId){const next=structuredClone(player),saved=next.memories??[];next.history=(next.history??[]).map((r,i)=>({...r,matchId:r.matchId??Math.max(1,next.stats.appearances-next.history.length+i+1)}));const row=next.history.find(r=>r.matchId===matchId),memory=saved.find(r=>r.matchId===matchId);if(memory){if(row&&!row.report)row.report=memory.report;next.memories=saved.filter(r=>r.matchId!==matchId);if(next.signatureMatchId===matchId)delete next.signatureMatchId;return next}if(!row?.report||saved.length>=30)return next;next.memories=[...saved,memoryOf(row)];return next}
 
 export function finishCareerMatch(player,stat,score,duration,context={}){
-  const next=structuredClone(player),match={};for(const field of FIELDS)match[field]=stat?.[field]??0;
-  const rating=playerRating(match,score,next.position),objective=context.objective??careerObjective(next.position),objectiveComplete=match[objective.field]>=objective.target,engaged=['goals','assists','shotsOnTarget','passesCompleted','tackles','interceptions','blocks','keyPasses','carryDistance'].some(k=>match[k]>0),xpGain=15+(engaged?Math.max(0,Math.round((rating-5)*10)):0)+match.goals*12+match.assists*8+(objectiveComplete?10:0);
+  const next=structuredClone(player);next.attributes.shielding??=POSITION[next.position].attributes.shielding;const match={};for(const field of FIELDS)match[field]=stat?.[field]??0;
+  const rating=playerRating(match,score,next.position),objective=context.objective??careerObjective(next.position),objectiveComplete=match[objective.field]>=objective.target,engaged=['goals','assists','shotsOnTarget','passesCompleted','tackles','interceptions','blocks','keyPasses','carryDistance'].some(k=>match[k]>0),baseXp=15+(engaged?Math.max(0,Math.round((rating-5)*10)):0)+match.goals*12+match.assists*8+(objectiveComplete?10:0),xpGain=context.source==='simulated'?Math.round(baseXp*.7):baseXp;
   next.progressXp=levelProgress(next).value+xpGain;next.xp+=xpGain;const oldLevel=next.level;while(next.progressXp>=levelProgress(next).target){next.progressXp-=levelProgress(next).target;next.level++}const levels=next.level-oldLevel;
-  if(levels>0){const primary=POSITION[next.position].primary;for(const key of Object.keys(next.attributes))next.attributes[key]=Math.min(99,next.attributes[key]+levels*(key===primary?2:1))}
+  next.trainingPoints=(next.trainingPoints??0)+levels*2;
   next.stats.appearances++;next.stats[score[0]>score[1]?'wins':score[0]<score[1]?'losses':'draws']++;next.stats.ratingTotal+=rating;for(const field of FIELDS)next.stats[field]=(next.stats[field]??0)+match[field];
-  next.lastMatch={...match,rating:+rating.toFixed(1),xpGain:Math.max(15,xpGain),score:[...score],minutes:Math.min(90,Math.round((match.playingSeconds||duration)/duration*90)),objective:{...objective,complete:objectiveComplete},growth:Object.fromEntries(Object.keys(next.attributes).map(k=>[k,next.attributes[k]-player.attributes[k]]))};
+  next.lastMatch={...match,rating:+rating.toFixed(1),xpGain,score:[...score],minutes:Math.min(90,Math.round((match.playingSeconds||duration)/duration*90)),objective:{...objective,complete:objectiveComplete},...(context.source?{source:context.source}:{}),...(context.goalEvents?{goalEvents:structuredClone(context.goalEvents)}:{}),growth:Object.fromEntries(Object.keys(next.attributes).map(k=>[k,next.attributes[k]-(player.attributes?.[k]??next.attributes[k])]))};
   if(context.seasonState){next.lastMatch.roleBefore=roleProgress(player,context.seasonState).tier;next.clubProgress=advanceClubRole(player,next.lastMatch,context);next.lastMatch.roleAfter=roleProgress(next,context.seasonState).tier}
   const previous=(next.history??[]).map((r,i)=>({...r,matchId:r.matchId??Math.max(1,next.stats.appearances-(next.history?.length??0)+i)}));
   const row={...next.lastMatch,...next.attributes,level:next.level,ratingVersion:2,storyFinal:context.final?1:0,storyChampion:context.champion?1:0,matchId:next.stats.appearances,competition:context.competition??'league',season:context.season??1,opponent:context.opponent??'对手',report:context.report?structuredClone(context.report):null};

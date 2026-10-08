@@ -6,28 +6,40 @@ export const LEAGUES=[
     club('arsenal','Arsenal','#cb3944','#f0ece7',1.13,'press'),club('mancity','Manchester City','#86c6e5','#f0eee7',1.14,'balanced','#243a58'),
     club('liverpool','Liverpool','#c43b44','#e8d5ac',1.12,'press'),club('chelsea','Chelsea','#3663bd','#f0eee7',1.08),
     club('manutd','Manchester United','#c53942','#f0e7d8',1.07,'counter'),club('tottenham','Tottenham Hotspur','#eaeae5','#283856',1.04,'balanced','#283856'),
-    club('newcastle','Newcastle United','#e9e9e4','#252e35',1.05,'press','#252e35'),club('astonvilla','Aston Villa','#8b4566','#a1cee7',1.03,'counter')]},
+    club('newcastle','Newcastle United','#e9e9e4','#252e35',1.05,'press','#252e35'),club('astonvilla','Aston Villa','#8b4566','#a1cee7',1.03,'counter'),club('bournemouth','AFC Bournemouth','#c43f48','#292f34',.99,'press'),club('brentford','Brentford FC','#c33d48','#eeeeea',1.00,'balanced'),club('brighton','Brighton & Hove Albion','#72c5e3','#f1eee7',1.02,'press','#263957'),club('crystalpalace','Crystal Palace','#4267a9','#c8434c',.99,'counter'),club('everton','Everton FC','#4167ad','#eeeae4',1.00,'counter'),club('fulham','Fulham FC','#eaeae5','#303640',.98,'balanced','#303640'),club('leeds','Leeds United','#eaeae4','#34528a',.99,'press','#34528a'),club('nottinghamforest','Nottingham Forest','#c7414a','#eee9e3',.98,'counter')]},
   {id:'spain',name:'LALIGA EA SPORTS · 西甲',teams:[
     club('realmadrid','Real Madrid','#f0eee7','#cdbb77',1.16,'counter','#383650'),club('barcelona','FC Barcelona','#3157a2','#aa334d',1.15,'press','#ead8a8'),
     club('atletico','Atlético de Madrid','#c33b4a','#f0eee8',1.10,'press'),club('athletic','Athletic Club','#c93d47','#f1eee9',1.04,'press'),
     club('realsociedad','Real Sociedad','#438cc0','#eeeae3',1.03),club('betis','Real Betis','#51a074','#eef0e7',1.02),
-    club('sevilla','Sevilla FC','#eaeae4','#bb4149',1.00,'counter','#bb4149'),club('valencia','Valencia CF','#eae9e4','#282e35',.99,'counter','#282e35')]},
+    club('sevilla','Sevilla FC','#eaeae4','#bb4149',1.00,'counter','#bb4149'),club('valencia','Valencia CF','#eae9e4','#282e35',.99,'counter','#282e35'),club('villarreal','Villarreal CF','#e8d94f','#303848',1.04,'press'),club('celta','Celta','#81b9d6','#e8e9e3',1.00,'balanced'),club('osasuna','CA Osasuna','#bb3a43','#26364a',.99,'press'),club('espanyol','RCD Espanyol','#61a8d4','#e9e9e4',.99,'balanced'),club('getafe','Getafe CF','#4d83ba','#e9e9e2',.98,'counter'),club('alaves','Deportivo Alavés','#2e4c78','#6b9cc7',.98,'counter'),club('deportivo','RC Deportivo','#8eabc4','#34465a',.97,'balanced'),club('racing','Racing Club','#288c74','#f1eee5',.97,'press')]},
   {id:'germany',name:'Bundesliga · 德甲',teams:[
     club('bayern','FC Bayern München','#c83c48','#eee9e2',1.16,'press'),club('dortmund','Borussia Dortmund','#e7d04f','#282b2d',1.10,'press','#282b2d'),
     club('leverkusen','Bayer 04 Leverkusen','#bb3b45','#272b32',1.11),club('leipzig','RB Leipzig','#e9e9e3','#c53c43',1.08,'press','#c53c43'),
     club('frankfurt','Eintracht Frankfurt','#282e34','#d74750',1.04,'counter','#d74750'),club('stuttgart','VfB Stuttgart','#eae9e4','#c8474d',1.05,'balanced','#c8474d'),
-    club('freiburg','SC Freiburg','#ca464b','#292e32',1.01,'counter'),club('gladbach','Borussia Mönchengladbach','#eaece6','#353b3e',.99,'balanced','#353b3e')]},
+    club('freiburg','SC Freiburg','#ca464b','#292e32',1.01,'counter'),club('gladbach','Borussia Mönchengladbach','#eaece6','#353b3e',.99,'balanced','#353b3e'),club('augsburg','FC Augsburg','#cf3f48','#e9ece7',.98,'counter'),club('unionberlin','1. FC Union Berlin','#c74349','#eeeae2',.99,'press'),club('werder','SV Werder Bremen','#168b70','#eee9dd',1.00,'press'),club('hamburg','Hamburger SV','#e9e9e4','#2f6191',.99,'balanced'),club('hoffenheim','TSG Hoffenheim','#5c9bc4','#e8e8e2',1.00,'balanced'),club('koln','1. FC Köln','#e9e9e4','#ce3d47',.99,'press'),club('mainz','1. FSV Mainz 05','#c33c48','#eaeae4',.98,'counter'),club('schalke','FC Schalke 04','#2f5794','#e8e8e3',1.00,'balanced')]},
   {id:'italy',name:'Serie A Enilive · 意甲',teams:[
     club('inter','Inter','#3465a6','#29313c',1.12),club('milan','AC Milan','#c7434a','#292d32',1.10,'press'),
     club('napoli','SSC Napoli','#6bb9db','#eeeae3',1.11,'press','#2b4461'),club('juventus','Juventus','#e9e9e3','#292e33',1.09,'balanced','#292e33'),
     club('roma','AS Roma','#943c49','#d9a567',1.05,'counter'),club('atalanta','Atalanta','#3977b3','#29303a',1.06,'press'),
-    club('lazio','SS Lazio','#91c8dc','#f0ece5',1.02,'balanced','#263d5a'),club('fiorentina','ACF Fiorentina','#7653a6','#ede8e2',1.00,'counter')]},
+    club('lazio','SS Lazio','#91c8dc','#f0ece5',1.02,'balanced','#263d5a'),club('fiorentina','ACF Fiorentina','#7653a6','#ede8e2',1.00,'counter'),club('bologna','Bologna FC','#bf3e47','#263c5d',1.02,'press'),club('cagliari','Cagliari Calcio','#bd3d46','#2d4b78',.98,'counter'),club('como','Como 1907','#79b7d4','#eeeae2',.99,'balanced'),club('genoa','Genoa CFC','#b9434d','#283f6c',.99,'counter'),club('parma','Parma Calcio','#e8d04f','#263b61',.99,'balanced'),club('sassuolo','US Sassuolo','#287d60','#252d36',.98,'press'),club('torino','Torino FC','#873d49','#eae7e1',1.00,'counter'),club('udinese','Udinese Calcio','#292e34','#e5e5df',.98,'balanced')]},
   {id:'france',name:'Ligue 1 McDonald’s · 法甲',teams:[
     club('psg','Paris Saint-Germain','#2c3e70','#c3414d',1.16,'press'),club('marseille','Olympique de Marseille','#ecece7','#6ab8d4',1.08,'press','#37658e'),
     club('monaco','AS Monaco','#d9444e','#f0ece6',1.07,'counter'),club('lyon','Olympique Lyonnais','#eaece6','#4769a4',1.05,'balanced','#4769a4'),
     club('lille','LOSC Lille','#b93c49','#283e69',1.05,'press'),club('lens','RC Lens','#e5c34b','#ac3c46',1.04,'press','#ac3c46'),
-    club('rennes','Stade Rennais FC','#c23e47','#292e32',1.01,'counter'),club('strasbourg','RC Strasbourg Alsace','#4385ba','#e9ece8',1.00)]}
+    club('rennes','Stade Rennais FC','#c23e47','#292e32',1.01,'counter'),club('strasbourg','RC Strasbourg Alsace','#4385ba','#e9ece8',1.00),
+    club('nice','OGC Nice','#242a34','#c33e48',1.01,'balanced','#c33e48'),club('brest','Stade Brestois 29','#bf3d46','#e9e8e2',.99,'press'),
+    club('toulouse','Toulouse FC','#573e94','#eee9e4',.99,'balanced'),club('auxerre','AJ Auxerre','#eaeae5','#347ab4',.98,'counter'),
+    club('angers','Angers SCO','#eae9e4','#252d35',.97,'counter'),club('lorient','FC Lorient','#e87439','#252e38',.98,'press'),
+    club('parisfc','Paris FC','#1c2e4b','#eeeeea',.99,'balanced'),club('lehavre','Le Havre AC','#386da1','#222e3a',.97,'counter')]}
 ];
+
+export const LEGACY_TEAM_IDS={
+  england:['arsenal','mancity','liverpool','chelsea','manutd','tottenham','newcastle','astonvilla'],
+  spain:['realmadrid','barcelona','atletico','athletic','realsociedad','betis','sevilla','valencia'],
+  germany:['bayern','dortmund','leverkusen','leipzig','frankfurt','stuttgart','freiburg','gladbach'],
+  italy:['inter','milan','napoli','juventus','roma','atalanta','lazio','fiorentina'],
+  france:['psg','marseille','monaco','lyon','lille','lens','rennes','strasbourg']
+};
 
 // Old six-team seasons stay readable and playable, but new saves use the real leagues above.
 export const LEGACY_LEAGUES=[

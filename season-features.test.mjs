@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {LEAGUES,createSeason,simulateWeek,seasonRounds} from './league.mjs';
 import {startCup} from './cup.mjs';
 import {finances,offers,sign,windowState} from './transfers.mjs';
-import {ceremony,nextCeremony} from './awards.mjs';
+import {ceremony,nextCeremony,recordCeremonyHonors} from './awards.mjs';
 import {Match} from './engine.mjs';
 import {makeClubSlot,exportBackup,importBackup} from './save-slots.mjs';
 
@@ -14,6 +14,8 @@ season=sign(season,first.id);
 assert.equal(season.rosterIds.arsenal[5],first.id);
 assert.equal(season.rosterIds[first.from][5],original);
 assert.equal(season.playerData[first.id].teamId,'arsenal');
+assert.equal(season.playerData[first.id].transferHistory.length,1,'签入球员需要保留稳定 ID 的转会履历');
+assert.equal(season.playerData[original].transferHistory.length,1,'互换转出的球员也需要保留转会履历');
 assert.equal(finances(season).balance,+(before-first.fee).toFixed(1));
 assert.equal(windowState(season).remaining,1);
 assert.equal(importBackup(exportBackup({version:2,active:0,slots:[makeClubSlot(season),null,null]})).slots[0].season.rosterIds.arsenal[5],first.id);
@@ -22,18 +24,19 @@ assert(second);
 season=sign(season,second.id);
 assert.equal(windowState(season).remaining,0);
 assert.throws(()=>sign(season,offers(season)[0].id));
-for(let i=0;i<7;i++)simulateWeek(season);
+for(let i=0;i<15;i++)simulateWeek(season);
 assert.equal(windowState(season).kind,'winter');
 assert.equal(windowState(season).remaining,1);
 const winter=offers(season).find(o=>o.allowed&&o.fee<=finances(season).balance);
 assert(winter);
 season=sign(season,winter.id);
 assert.equal(windowState(season).remaining,0);
-for(let i=7;i<seasonRounds(season);i++)simulateWeek(season);
+for(let i=15;i<seasonRounds(season);i++)simulateWeek(season);
 assert.equal(nextCeremony(season),'league');
 const league=ceremony(season,'league');
 assert.equal(league.awards.length,6);
 assert.equal(league.lineup.length,6);
+const leagueHonors=recordCeremonyHonors(season,'league');assert(leagueHonors.some(record=>record.award==='联赛金靴'));assert(season.playerData[leagueHonors[0].id].honors.length>0);
 season.seenAwards=['league'];
 startCup(season);
 if(season.cup.phase!=='complete')season.cup.phase='complete';
@@ -47,6 +50,9 @@ const foreignLeague=LEAGUES.find(l=>l.teams.some(t=>t.id===foreign)).id,foreignI
 season.cup.players[foreignId]={goals:1};
 season.world[foreignLeague].players[foreignId]={goals:100};
 assert.equal(ceremony(season,'europe').awards[1][1],season.playerData[foreignId].name,'金球奖须计算其他联赛的球员表现');
+const europeanBoot=ceremony(season,'europe').awards.find(([name])=>name==='欧洲金靴');assert.equal(europeanBoot[1],season.playerData[foreignId].name);assert.match(europeanBoot[2],/100 联赛 \+ 1 欧冠 = 101 球/);
+for(const [index,teamId] of season.cup.teams.slice(0,3).entries()){const id=season.rosterIds[teamId][5];season.cup.players[id]={goals:3-index,assists:index}}
+const euroHonors=recordCeremonyHonors(season,'europe');assert.equal(euroHonors.filter(record=>record.award.startsWith('年度金球奖')).length,3);assert(euroHonors.some(record=>record.award==='年度金球奖 · 第 1 名'));
 
 function distanceAt(speed){const attrs=Array.from({length:12},()=>({shooting:60,passing:60,defense:60,goalkeeping:60,speed:60}));attrs[5].speed=speed;const match=new Match({duration:180,playerAttributes:attrs});match.state='playing';match.wait=0;match.kickoffId=null;const start=match.players[5].x;match.step(.016,[{x:1,y:0},{}]);return match.players[5].x-start}
 assert(distanceAt(95)>distanceAt(30)*1.3,'速度能力应明显影响实际跑动');

@@ -3,7 +3,7 @@ import {teamName} from './identity.mjs';
 
 const resultWord=(ours,theirs)=>ours>theirs?'取胜':ours<theirs?'告负':'战平';
 
-export function makeMatchNews({before,after,mode,competition='league',score,opponent,stats,careerBefore=null,careerAfter=null,shootout=null,source='played'}){
+export function makeMatchNews({before,after,mode,competition='league',score,opponent,stats,careerBefore=null,careerAfter=null,shootout=null,source='played',goalEvents=[]}){
   const year=(before.history?.length??0)+1;
   const round=competition==='league'?before.week+1:competition==='cup'?(before.cup?.phase==='final'?'决赛':'半决赛'):0;
   const team=teamName(before,before.teamId);
@@ -25,7 +25,8 @@ export function makeMatchNews({before,after,mode,competition='league',score,oppo
   const personal=mode==='career'&&careerAfter?.lastMatch?`${careerAfter.name} 本场收获 ${careerAfter.lastMatch.goals} 球、${careerAfter.lastMatch.assists} 次助攻，评分 ${careerAfter.lastMatch.rating.toFixed(1)}。`:'';
   const table=competition==='league'?rankChange:'';
   const shotLine=stats?.shots?`双方射门 ${stats.shots[0]} : ${stats.shots[1]}，射正 ${stats.onTarget?.[0]??0} : ${stats.onTarget?.[1]??0}。`:'';
-  return {id:`${year}:${competition}:${round}:${after.results.length}:${after.cup?.results?.length??0}`,year,round,mode,competition,source,type,team,opponent,score:[...score],shootout:shootout?.score??null,headline,lead,body:[personal,table,shotLine].filter(Boolean).join(' '),stats:stats?{shots:[...(stats.shots??[0,0])],onTarget:[...(stats.onTarget??[0,0])],saves:[...(stats.saves??[0,0])]}:null};
+  const scorers=goalEvents.map(e=>`${e.minute}′ ${teamName(before,e.teamId)}：${e.scorerName}${e.assistName?`（${e.assistName} 助攻）`:''}`).join('；');
+  return {id:`${year}:${competition}:${round}:${after.results.length}:${after.cup?.results?.length??0}`,year,round,mode,competition,source,type,team,opponent,score:[...score],shootout:shootout?.score??null,headline,lead,body:[personal,scorers&&`进球：${scorers}。`,table,shotLine].filter(Boolean).join(' '),stats:stats?{shots:[...(stats.shots??[0,0])],onTarget:[...(stats.onTarget??[0,0])],saves:[...(stats.saves??[0,0])]}:null};
 }
 
 export function addMatchNews(season,article){season.news=[...(season.news??[]),article].slice(-80);return season}

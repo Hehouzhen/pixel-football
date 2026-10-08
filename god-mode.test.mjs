@@ -43,11 +43,13 @@ const broken=structuredClone(backup);broken.slots[0].season.playerData[id].numbe
 assert.throws(()=>importBackup(JSON.stringify(broken)));
 
 const career=createCareerPlayer('新星',10,'forward');let careerSeason=createSeason('england','arsenal',8);prepareSeason(careerSeason,career);careerSeason.godMode=true;
-const edited=editPlayer(careerSeason,career,career.id,{name:'传奇',number:27,attributes:{shooting:96}});
-assert.equal(edited.career.name,'传奇');assert.equal(edited.career.number,27);assert.equal(edited.career.attributes.shooting,96);
+const edited=editPlayer(careerSeason,career,career.id,{name:'传奇',number:27,age:24,potential:92,attributes:{shooting:96,shielding:88}});
+assert.equal(edited.career.name,'传奇');assert.equal(edited.career.number,27);assert.equal(edited.career.age,24);assert.equal(edited.career.potential,92);assert.equal(edited.career.attributes.shooting,96);assert.equal(edited.career.attributes.shielding,88);assert.throws(()=>editPlayer(edited.season,edited.career,career.id,{age:14}));
 assert.throws(()=>editPlayer(edited.season,edited.career,career.id,{teamId:'chelsea'}));
 const stat=editPlayerStats(edited.season,edited.career,career.id,'league','england',{goals:2});
 assert.equal(stat.career.stats.goals,2);
 backup=importBackup(exportBackup({version:2,active:0,slots:[makeCareerSlot(stat.season,stat.career),null,null]}));
-assert.equal(backup.slots[0].player.number,27);
+assert.equal(backup.slots[0].player.number,27);assert.equal(backup.slots[0].player.age,24);assert.equal(backup.slots[0].season.playerData[career.id].potential,92);
+const oldSave=structuredClone(backup);delete oldSave.slots[0].player.attributes.shielding;for(const player of Object.values(oldSave.slots[0].season.playerData))delete player.attributes.shielding;
+const migrated=importBackup(exportBackup(oldSave));assert(migrated.slots[0].player.attributes.shielding>=1);assert(Object.values(migrated.slots[0].season.playerData).every(player=>player.attributes.shielding>=1));assert(Number.isInteger(migrated.slots[0].player.age));assert(Object.values(migrated.slots[0].season.playerData).every(player=>Number.isInteger(player.age)&&Number.isInteger(player.potential)));
 console.log('PASS: God Mode names, numbers, ratings, transfers, stats, MyCareer and backup integrity.');

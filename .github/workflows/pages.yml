@@ -30,6 +30,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Install browser for UI tests
+        run: npx playwright install --with-deps chromium
+
       - name: Test game
         run: npm test
 

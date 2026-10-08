@@ -26,7 +26,7 @@ export function careerSeasonSummary(player,year){
  const rows=careerRows(player).filter(r=>r.season===year),stored=player.seasonLedger?.[String(year)],ledger=stored?.appearances>=rows.length?stored:null;
  if(!rows.length&&!ledger)return null;
  const sum=k=>rows.reduce((n,r)=>n+(r[k]??0),0),appearances=ledger?.appearances??rows.length;
- const first=rows[0],last=rows.at(-1),growth=Object.fromEntries(['shooting','passing','defense'].map(k=>[k,rows.length&&rows.every(r=>r.growth?.[k]!==undefined)?sumGrowth(rows,k):null]));
+ const first=rows[0],last=rows.at(-1),growth=Object.fromEntries(['shooting','passing','defense','shielding'].map(k=>[k,rows.length&&rows.every(r=>r.growth?.[k]!==undefined)?sumGrowth(rows,k):null]));
  return {year,rows,appearances,goals:ledger?.goals??sum('goals'),assists:ledger?.assists??sum('assists'),rating:appearances?(ledger?.ratingTotal??sum('rating'))/appearances:0,xp:ledger?.xpGain??sum('xpGain'),wins:ledger?.wins??rows.filter(r=>r.score[0]>r.score[1]).length,draws:ledger?.draws??rows.filter(r=>r.score[0]===r.score[1]).length,losses:ledger?.losses??rows.filter(r=>r.score[0]<r.score[1]).length,growth,first,last,best:rows.slice().sort((a,b)=>b.rating-a.rating||b.goals-a.goals).slice(0,3),detailedComplete:rows.length===appearances,contributions:['shots','shotsOnTarget','passes','passesCompleted','keyPasses','tackles','interceptions','blocks','turnovers'].map(k=>[k,!rows.length||rows.some(r=>r[k]===undefined)?null:sum(k)])};
 }
 function sumGrowth(rows,k){return rows.reduce((n,r)=>n+r.growth[k],0)}

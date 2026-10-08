@@ -1,18 +1,25 @@
 import {PracticeMatch} from './practice.mjs';
 await import('./news.test.mjs');
 await import('./identity.test.mjs');
+await import('./stats.test.mjs');
+await import('./player-attributes.test.mjs');
+await import('./aging.test.mjs');
+await import('./world.test.mjs');
+await import('./weather.test.mjs');
+await import('./result-info.test.mjs');
 await import('./god-mode.test.mjs');
 import {shotAdvice} from './experience.mjs';
 await import('./experience-update.test.mjs');
 await import('./career-story.test.mjs');
+await import('./career-transfers.test.mjs');
 await import('./career-role.test.mjs');
 await import('./tactics.test.mjs');
 await import('./season-features.test.mjs');
 import assert from 'node:assert/strict';
-import {Match, FIELD, keeperMistakeChance, shootoutWinner} from './engine.mjs';
+import {Match, FIELD, keeperMistakeChance, shootoutWinner, tackleSuccessChance} from './engine.mjs';
 import {keeperVisual} from './keeper-motion.mjs';
-import {LEAGUES,LEGACY_LEAGUES,fixtures,createSeason,currentFixture,completeWeek,standings,leaders,seasonRounds,seasonSummary,leagueAwards,seasonRecords,simulate,simulateWeek} from './league.mjs';
-import {startCup,cupNextMatch,cupStandings,completeCupMatch} from './cup.mjs';
+import {LEAGUES,LEGACY_LEAGUES,fixtures,createSeason,currentFixture,completeWeek,standings,leaders,seasonRounds,seasonSummary,leagueAwards,seasonRecords,simulate,simulateFixture,simulateWeek,orientStats,prepareSeason} from './league.mjs';
+import {startCup,cupNextMatch,cupStandings,completeCupMatch,simulateShootout,cupNeedsShootout} from './cup.mjs';
 import {SAVE_KEY,loadSaveData,makeClubSlot,saveSaveData,exportBackup,importBackup,makeCareerSlot} from './save-slots.mjs';
 import {createCareerPlayer,finishCareerMatch,playerRating,careerObjective} from './career.mjs';
 
@@ -64,33 +71,38 @@ assert.equal(match({difficulty:0}).pressers(1),1);assert.equal(match({difficulty
 
 m=match({careerIndex:1,careerAttributes:{shooting:52,passing:58,defense:70}});assert.equal(m.selected[0],1);m.ball.owner=5;assert(m.requestPass());assert.equal(m.selected[0],1);assert.equal(m.stats[5].passes,1);m.reset(1);assert.equal(m.selected[0],1);
 for(let i=0;i<9000;i++)m.step(.02);assert.equal(m.state,'ended');assert.equal(m.selected[0],1);
-let player=createCareerPlayer('测试球员',4,'defender');player.xp=95;player=finishCareerMatch(player,{tackles:3,passes:4,passesCompleted:3,distance:80},[1,0],180);assert.equal(player.level,2);assert.equal(player.attributes.defense,72);assert.equal(player.stats.appearances,1);assert.equal(player.stats.tackles,3);
+let player=createCareerPlayer('测试球员',4,'defender');player.xp=95;player=finishCareerMatch(player,{tackles:3,passes:4,passesCompleted:3,distance:80},[1,0],180);assert.equal(player.level,2);assert.equal(player.attributes.defense,70);assert.equal(player.trainingPoints,2);assert.equal(player.stats.appearances,1);assert.equal(player.stats.tackles,3);
 
 assert.equal(LEAGUES.length,5);
-for(const league of LEAGUES){assert.equal(league.teams.length,8);assert.equal(fixtures(league).length,14);assert.equal(new Set(fixtures(league).flat().map(pair=>pair.join(':'))).size,56)}
+assert.equal(new Set([...LEAGUES,...LEGACY_LEAGUES].flatMap(item=>item.teams.map(team=>team.id))).size,[...LEAGUES,...LEGACY_LEAGUES].reduce((sum,item)=>sum+item.teams.length,0),'新增俱乐部 ID 不得覆盖旧联赛球队');
+for(const league of LEAGUES){assert.equal(league.teams.length,16);assert.equal(fixtures(league).length,30);assert.equal(new Set(fixtures(league).flat().map(pair=>pair.join(':'))).size,240)}
 assert.equal(fixtures(LEGACY_LEAGUES[0]).length,10);
 const league=LEAGUES[0],season=createSeason(league.id,league.teams[0].id);
 season.names[`${season.teamId}:5`]='测试球员';
 for(let i=0;i<seasonRounds(season);i++){assert(currentFixture(season));completeWeek(season,[5,0],Array.from({length:12},(_,j)=>({goals:j===5?5:0,assists:j===4?1:0})),{shots:[7,2],onTarget:[5,1],passes:[40,28],passesCompleted:[31,19],crosses:[3,2],tackles:[5,4],fouls:[1,2],yellows:[0,1],reds:[0,0],saves:[1,0]})}
-assert.equal(season.results.length,56);
-assert(standings(season).every(row=>row.played===14));
+assert.equal(season.results.length,240);
+assert(standings(season).every(row=>row.played===30));
 assert.equal(currentFixture(season),undefined);
 assert.equal(standings(season)[0].id,season.teamId);
 assert.equal(leaders(season)[0].name,'测试球员');
-assert.equal(seasonSummary(season).saves,14);
+assert.equal(seasonSummary(season).saves,30);
 assert.equal(season.awards.champion,season.teamId);
 assert.equal(leagueAwards(season).goldenBoot.name,'测试球员');
-assert.equal(seasonRecords(season).winStreak,14);
-for(const other of LEAGUES.slice(1))assert.equal(standings(season,other.id).reduce((n,r)=>n+r.played,0),112);
-startCup(season);assert.equal(season.cup.teams.length,10);assert(season.cup.teams.includes(season.teamId));
-assert.equal(cupStandings(season).length,10);
-let played=0;while(cupNextMatch(season)){const shootout=season.cup.phase==='league'?null:{winner:season.teamId,score:[5,4]};completeCupMatch(season,season.cup.phase==='league'?[2,0]:[1,1],null,null,shootout);played++}
-assert.equal(played,6);assert.equal(season.cup.phase,'complete');assert.equal(season.cup.champion,season.teamId);assert.equal(season.cup.results.length,23);
+assert.equal(seasonRecords(season).winStreak,30);
+for(const other of LEAGUES.slice(1))assert(standings(season,other.id).every(row=>row.played===30));
+startCup(season);assert.equal(season.cup.teams.length,20);assert(season.cup.teams.includes(season.teamId));assert.equal(season.cup.fixtures.flat().length,40);
+assert.equal(cupStandings(season).length,4);assert(cupStandings(season).every(group=>group.length===5));
+for(const group of season.cup.groups){const matches=season.cup.fixtures.flat().filter(pair=>pair.every(id=>group.includes(id)));assert.equal(matches.length,10);for(const id of group)assert.equal(matches.filter(pair=>pair.includes(id)).length,4);assert.equal(new Set(group.map(id=>LEAGUES.find(league=>league.teams.some(team=>team.id===id)).id)).size,5,'欧冠同组应来自不同联赛')}
+let played=0;while(cupNextMatch(season)){completeCupMatch(season,[2,0],Array.from({length:12},(_,i)=>({goals:i===5?2:0})),null);played++}
+assert.equal(played,9);assert.equal(season.cup.phase,'complete');assert.equal(season.cup.champion,season.teamId);assert.equal(season.cup.results.length,53);
+for(const teamId of season.cup.teams){const goals=season.cup.results.reduce((sum,result)=>sum+(result.home===teamId?result.score[0]:result.away===teamId?result.score[1]:0),0),playerGoals=season.rosterIds[teamId].reduce((sum,id)=>sum+(season.cup.players[id]?.goals??0),0);assert.equal(playerGoals,goals,`${teamId} 欧冠进球应与球队比分一致`)}
 assert.equal(season.cup.names[`${season.teamId}:5`],'测试球员');
+const aggregateCup=createSeason('england','arsenal',91),cupTeams=LEAGUES.flatMap(item=>item.teams.slice(0,4).map(team=>team.id));aggregateCup.cup={formatVersion:2,phase:'quarterfinal',round:0,teams:cupTeams,quarters:[[[...['arsenal','mancity']],['liverpool','chelsea'],['manutd','tottenham'],['newcastle','astonvilla']],[['mancity','arsenal'],['chelsea','liverpool'],['tottenham','manutd'],['astonvilla','newcastle']]],results:[],players:{},rosterIds:aggregateCup.rosterIds,playerData:aggregateCup.playerData,names:{},semis:null,final:null};assert.equal(cupNeedsShootout(aggregateCup,[0,0]),false,'八强首回合平局不应直接点球');completeCupMatch(aggregateCup,[1,0],Array.from({length:12},()=>({})),null);assert.equal(aggregateCup.cup.round,1);assert.equal(cupNeedsShootout(aggregateCup,[0,1]),true,'两回合总比分平局应点球');assert.equal(cupNeedsShootout(aggregateCup,[1,0]),false,'总比分领先不应点球');
 const storage={values:new Map(),getItem(k){return this.values.get(k)??null},setItem(k,v){this.values.set(k,v)}};
 saveSaveData({version:2,active:0,slots:[makeClubSlot(season),null,null]},storage);assert.equal(loadSaveData(storage).slots[0].season.cup.champion,season.teamId);
 const legacy={leagueId:LEGACY_LEAGUES[0].id,teamId:LEGACY_LEAGUES[0].teams[0].id,week:4,results:[],players:{}};
 storage.setItem(SAVE_KEY,JSON.stringify({version:2,active:0,slots:[makeClubSlot(legacy),null,null]}));assert.equal(loadSaveData(storage).slots[0].season.week,4);
+const legacyPremier=createSeason('england','arsenal',43);delete legacyPremier.formatVersion;delete legacyPremier.leagueTeamIds;for(const state of Object.values(legacyPremier.world))delete state.leagueTeamIds;prepareSeason(legacyPremier);assert.equal(seasonRounds(legacyPremier),14);assert.equal(standings(legacyPremier).length,8);
 m=match({careerIndex:5,careerNumber:27,careerLook:{skin:'#805b48',hair:'#302b24'},styles:['press','counter']});assert.equal(m.careerNumber,27);assert.equal(m.careerLook.skin,'#805b48');assert.equal(m.styles[1],'counter');
 console.log('PASS: match flow, AI, career identity, five leagues, stats, cup and local saves.');
 
@@ -127,7 +139,7 @@ m=match();for(let i=0;i<25;i++)m.step(.016);assert(m.heat[5][0].some(n=>n>0));as
 assert.notEqual(careerObjective('forward',0).field,careerObjective('forward',1).field);assert(careerObjective('midfielder',0,300).target>careerObjective('midfielder',0,120).target);
 const look={skin:'#ebbd89',hair:'#302b24',hairstyle:3,shoes:'#ffffff',sleeve:'long',celebration:1};let newPlayer=createCareerPlayer('复盘测试',27,'forward',look,'finisher');
 m=match({careerIndex:5,careerNumber:27});m.kick(5,true,.8);m.goal(0);const recorded=m.report();newPlayer=finishCareerMatch(newPlayer,m.stats[5],m.score,120,{report:recorded,season:1,opponent:'测试队',objective:m.objective});assert.equal(newPlayer.history.length,1);assert(newPlayer.honors.includes('首次进球'));assert.equal(newPlayer.stats.goals,1);
-const newBackup={version:2,active:0,slots:[makeCareerSlot(createSeason(league.id,league.teams[0].id),newPlayer),null,null]};assert.deepEqual(importBackup(exportBackup(newBackup)).slots[0].player,{...newPlayer,id:'p:arsenal:5'});
+const newBackup={version:2,active:0,slots:[makeCareerSlot(createSeason(league.id,league.teams[0].id),newPlayer),null,null]},restoredCareer=importBackup(exportBackup(newBackup)).slots[0].player;assert.equal(restoredCareer.id,'p:arsenal:5');assert.equal(restoredCareer.name,newPlayer.name);assert.equal(restoredCareer.age,18);assert.equal(restoredCareer.trainingPoints,0);assert.equal(restoredCareer.potential,newPlayer.potential);
 let invalid=structuredClone(newBackup);invalid.slots[0].player.history[0].report.shots[0].x=2;assert.throws(()=>importBackup(exportBackup(invalid)));invalid=structuredClone(newBackup);invalid.slots[0].player.appearance.hairstyle=20;assert.throws(()=>importBackup(exportBackup(invalid)));
 for(let i=0;i<6;i++)newPlayer=finishCareerMatch(newPlayer,{},[0,0],120,{report:recorded});assert(newPlayer.history[0].report.heat,'career best performance retains its detailed report');assert(newPlayer.history.at(-1).report.heat);assert(recorded.heat,'history pruning must preserve the original report');
 let archivePlayer=createCareerPlayer('年鉴',27,'forward');for(let i=0;i<45;i++)archivePlayer=finishCareerMatch(archivePlayer,{goals:1},[1,0],120,{season:i<30?1:2});assert.equal(archivePlayer.history.length,45);assert.equal(archivePlayer.seasonLedger[1].appearances,30);assert.equal(archivePlayer.seasonLedger[2].goals,15);assert.equal(archivePlayer.stats.goals,45);assert.equal(archivePlayer.history.at(-1).shooting,archivePlayer.attributes.shooting);
@@ -142,8 +154,9 @@ const playedSeason=createSeason(league.id,league.teams[0].id);m=match();complete
 console.log('PASS: playable style differences and league report backup validation.');
 
 // Simulation advances exactly one round, preserves home/away orientation and persists totals.
-const simSeason=createSeason(league.id,league.teams[0].id,77);for(let week=0;week<2;week++){const fixture=currentFixture(simSeason),expected=simulate(...fixture,week,undefined,77);simulateWeek(simSeason);const own=simSeason.results.find(r=>r.week===week&&(r.home===simSeason.teamId||r.away===simSeason.teamId));assert.deepEqual(own.score,expected.score);assert.deepEqual(own.stats,expected.stats);assert.equal(own.source,'simulated');assert.equal(own.report,undefined);assert.equal(simSeason.week,week+1);assert.equal(simSeason.results.length,4*(week+1));assert.equal(simSeason.world.spain.results.length,4*(week+1))}
-const simulatedTotals=Object.entries(simSeason.players).filter(([id])=>simSeason.rosterIds[simSeason.teamId].includes(id)).reduce((n,[,p])=>n+p.goals,0);assert.equal(simulatedTotals,seasonSummary(simSeason).goalsFor);assert.equal(importBackup(exportBackup({version:2,active:0,slots:[makeClubSlot(simSeason),null,null]})).slots[0].season.week,2);while(currentFixture(simSeason))simulateWeek(simSeason);assert(simSeason.awards);startCup(simSeason);assert(simSeason.cup);assert.throws(()=>simulateWeek(simSeason));
+const simSeason=createSeason(league.id,league.teams[0].id,77);for(let week=0;week<2;week++){const fixture=currentFixture(simSeason),expected=simulateFixture(simSeason,...fixture,week);simulateWeek(simSeason);const own=simSeason.results.find(r=>r.week===week&&(r.home===simSeason.teamId||r.away===simSeason.teamId));assert.deepEqual(own.score,expected.score);assert.deepEqual(own.stats,expected.stats);assert.equal(own.source,'simulated');assert.equal(own.report,undefined);assert.equal(simSeason.week,week+1);assert.equal(simSeason.results.length,8*(week+1));assert.equal(simSeason.world.spain.results.length,8*(week+1));assert.equal(own.playerStats.filter(p=>p.teamId===own.home).reduce((n,p)=>n+(p.goals??0),0),own.score[0]);assert.equal(own.playerStats.filter(p=>p.teamId===own.away).reduce((n,p)=>n+(p.goals??0),0),own.score[1]);assert.equal(own.goalEvents.length,own.score[0]+own.score[1])}
+const simulatedTotals=Object.entries(simSeason.players).filter(([id])=>simSeason.rosterIds[simSeason.teamId].includes(id)).reduce((n,[,p])=>n+p.goals,0);assert.equal(simulatedTotals,seasonSummary(simSeason).goalsFor);assert.equal(importBackup(exportBackup({version:2,active:0,slots:[makeClubSlot(simSeason),null,null]})).slots[0].season.week,2);while(currentFixture(simSeason))simulateWeek(simSeason);assert(simSeason.awards);simSeason.teamId=standings(simSeason)[0].id;startCup(simSeason);assert(simSeason.cup);assert.throws(()=>simulateWeek(simSeason));
+const cupPair=cupNextMatch(simSeason),cupHome=cupPair[0],cupAway=cupPair[1],cupFixture=simulateFixture(simSeason,cupHome,cupAway,30+simSeason.cup.round,'cup'),cupHomeIsUser=cupHome===simSeason.teamId,cupScore=cupHomeIsUser?cupFixture.score:[...cupFixture.score].reverse(),cupStats=orientStats(cupFixture.stats,cupHomeIsUser),cupShootout=cupNeedsShootout(simSeason,cupScore)?simulateShootout(simSeason,cupHome,cupAway,30+simSeason.cup.round):null;completeCupMatch(simSeason,cupScore,null,cupStats,cupShootout,null,{...cupFixture,source:'simulated'});const savedCup=simSeason.cup.results.find(r=>r.home===cupHome&&r.away===cupAway);assert.equal(savedCup.source,'simulated');assert.equal(savedCup.playerStats.filter(p=>p.teamId===cupHome).reduce((n,p)=>n+(p.goals??0),0),savedCup.score[0]);assert.equal(savedCup.playerStats.filter(p=>p.teamId===cupAway).reduce((n,p)=>n+(p.goals??0),0),savedCup.score[1]);assert.equal(savedCup.goalEvents.length,savedCup.score[0]+savedCup.score[1]);assert(importBackup(exportBackup({version:2,active:0,slots:[makeClubSlot(simSeason),null,null]})));const badSimulation={version:2,active:0,slots:[makeClubSlot(simSeason),null,null]};badSimulation.slots[0].season.cup.results.find(r=>r.home===cupHome&&r.away===cupAway).score[0]++;assert.throws(()=>importBackup(exportBackup(badSimulation)),'score and player goal totals must stay consistent');
 console.log('PASS: one-round simulation, home/away scores, standings, player totals, backups and cup qualification.');
 
 // Player-initiated passes switch on reception; AI passes, interceptions and manual choices do not.
@@ -152,8 +165,10 @@ m=match();m.ball.owner=3;assert(m.kick(3));m.takeBall(4);assert.equal(m.selected
 m=match();assert(m.kick(5));m.takeBall(11);assert.equal(m.selected[0],5,'interceptions must not select opponents');
 m=match();assert(m.kick(5));m.switch(0);const manuallySelected=m.selected[0];m.takeBall(manuallySelected===3?4:3);assert.equal(m.selected[0],manuallySelected);
 m=match({careerIndex:3});m.ball.owner=3;assert(m.kick(3));m.takeBall(4);assert.equal(m.selected[0],3);
-m=match({careerIndex:3});m.ball.owner=11;assert.equal(m.requestPass(),false);assert.match(m.event,/对方持球/);m.ball.owner=null;assert.equal(m.requestPass(),false);assert.match(m.event,/尚未被控制/);assert.match(m.actionHint(),/按 K/);
-m=match();m.ball.owner=11;assert.match(m.actionHint(),/按 Q/);m.penalty={team:0};assert.match(m.actionHint('cross'),/不能传中/);
+m=match();m.players[5].x=400;m.players[5].y=300;m.ball.owner=5;assert(m.kick(5,false,.4,{x:400,y:500}));assert(m.ball.vy>0&&Math.abs(m.ball.vy)>Math.abs(m.ball.vx)*4,'right-click pass must follow the pointer direction');assert.equal(m.stats[5].passes,1);
+m=match();m.players.forEach((p,id)=>{if(id!==4&&id!==5)p.x=100});m.players[4].x=499;m.players[4].y=300;m.players[5].x=800;m.players[5].y=300;m.ball.x=500;m.ball.y=300;m.selected[0]=5;m.switch(0);assert.equal(m.selected[0],4,'Q must select the nearest eligible defender');
+m=match({careerIndex:3});m.ball.owner=11;assert.equal(m.requestPass(),false);assert.match(m.event,/对方持球/);m.ball.owner=null;assert.equal(m.requestPass(),false);assert.match(m.event,/尚未被控制/);assert.match(m.actionHint(),/空格或鼠标右键/);
+m=match();m.ball.owner=11;assert.match(m.actionHint(),/Q 切换防守球员/);m.penalty={team:0};assert.match(m.actionHint('cross'),/不能传中/);
 m=match({careerIndex:3});m.ball.owner=5;m.players[3].x=600;m.players[3].y=300;m.players[5].x=400;m.players[5].y=300;m.players[11].x=600;m.players[11].y=300;assert.equal(m.requestPass(),false);assert.match(m.event,/接球人被盯住/);
 console.log('PASS: reception switching, manual override, career identity and contextual action feedback.');
 
@@ -165,8 +180,13 @@ m=match();assert.equal(m.shotOpen(5),false);m.players[5].x=810;m.players[5].y=FI
 m=match();const diveKeeper=m.players[6];diveKeeper.cool=0;diveKeeper.dive=.2;const delayedBall={x:diveKeeper.x,y:diveKeeper.y+18,z:0,kind:'shot',last:0,keeperDelay:.2};assert.equal(m.canCollect(diveKeeper,delayedBall),false);delayedBall.y=diveKeeper.y+5;assert.equal(m.canCollect(diveKeeper,delayedBall),true,'body remains solid during reaction');
 m=match();m.kick(5,true,.8,{x:FIELD.right,y:320});m.ball.x=m.players[6].x;m.ball.y=m.players[6].y+16;assert(m.parry(6));assert.equal(m.saves[1],1);assert.equal(m.shotLog[0].outcome,'saved');assert.equal(m.ball.owner,null);assert.equal(m.ball.kind,'parry');assert(m.players[6].cool>0);assert.equal(m.stats[5].shotsOnTarget,1);
 try{Math.random=()=>0;m=match();m.players[5].x=400;m.players[5].y=FIELD.center;m.players[5].dx=1;m.players[11].x=420;m.players[11].y=FIELD.center;m.ball.owner=5;m.players[5].settle=.18;assert.equal(m.attemptTackle(11),false);assert.equal(m.ball.owner,5);assert(m.players[11].tackleRecovery>0);m.players[11].cool=0;m.players[5].settle=0;assert(m.attemptTackle(11));assert.equal(m.ball.owner,11);
+ m=match();m.players[5].x=400;m.players[5].y=FIELD.center;m.players[11].x=442;m.players[11].y=FIELD.center;m.players[11].dx=-1;m.players[11].settle=0;m.ball.owner=11;assert(m.tackle(0,true),'sprinting slide tackle must extend the manual tackle reach');assert.equal(m.ball.owner,5);
 m=match();m.players.forEach(p=>p.cool=10);m.players[11].cool=0;m.players[11].x=420;m.players[11].y=FIELD.center;m.players[5].x=400;m.players[5].y=FIELD.center;m.players[5].dx=-1;m.ball.owner=5;m.ball.x=389;m.ball.y=FIELD.center;m.kickoffGrace=0;m.step(.016);assert.equal(m.ball.owner,5);assert(m.players[11].tackleWindup>0,'AI must prepare rather than instantly steal');
-m=match();m.players[5].x=400;m.players[5].y=FIELD.center;m.players[5].dx=1;m.players[11].x=395;m.players[11].y=FIELD.center;m.ball.owner=5;Math.random=()=>.6;assert.equal(m.attemptTackle(11),false,'shielded side reduces success');m.players[11].cool=0;m.players[11].x=405;assert.equal(m.attemptTackle(11),true,'exposed side rewards positioning');}finally{Math.random=originalRandom}
+m=match();m.players[5].x=400;m.players[5].y=FIELD.center;m.players[5].dx=1;m.players[11].x=395;m.players[11].y=FIELD.center;m.ball.owner=5;Math.random=()=>.6;assert.equal(m.attemptTackle(11),false,'shielded side reduces success');m.players[11].cool=0;m.players[11].x=405;Math.random=()=>.4;assert.equal(m.attemptTackle(11),true,'exposed side rewards positioning');
+assert(tackleSuccessChance(80,40) > tackleSuccessChance(40,80),'defense must beat shielding more often');
+m=match();m.players.forEach((p,id)=>{if(id!==5&&id!==11)p.cool=10});m.selected[0]=5;m.players[5].x=393;m.players[5].y=FIELD.center;m.players[11].x=420;m.players[11].y=FIELD.center;m.players[11].dx=-1;m.players[11].settle=0;m.ball.owner=11;Math.random=()=>0;m.step(.016,[{x:1},{}]);assert.equal(m.ball.owner,5,'moving into a frontal challenge should automatically win the ball');assert.equal(m.stats[5].tackles,1);
+m=match();m.players.forEach((p,id)=>{if(id!==5&&id!==11)p.cool=10});m.selected[0]=5;m.players[5].x=447;m.players[5].y=FIELD.center;m.players[11].x=420;m.players[11].y=FIELD.center;m.players[11].dx=-1;m.players[11].settle=0;m.ball.owner=11;m.step(.016,[{x:-1},{}]);assert.equal(m.stats[5].tackleAttempts,0,'approaching from behind should not auto-tackle');assert.equal(m.fouls[0],0);
+}finally{Math.random=originalRandom}
 console.log('PASS: fast shots, bounded input buffering, delayed dives, rebound stats, shielding and tackle preparation.');
 
 // A pre-positioned keeper can both save and concede the former near-post blind spot.

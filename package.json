@@ -1,1 +1,1 @@
-{"name":"pixel-football","private":true,"type":"module","scripts":{"build":"node build.mjs","test":"node test.mjs"},"dependencies":{"@remotion/player":"4.0.506","remotion":"4.0.506","react":"19.1.0","react-dom":"19.1.0"},"devDependencies":{"esbuild":"0.25.10"}}
+{"name":"pixel-football","private":true,"type":"module","scripts":{"build":"node build.mjs","test":"node test.mjs && playwright test"},"dependencies":{"@remotion/player":"4.0.506","react":"19.1.0","react-dom":"19.1.0","remotion":"4.0.506"},"devDependencies":{"@playwright/test":"^1.64.0","esbuild":"0.25.10"}}
