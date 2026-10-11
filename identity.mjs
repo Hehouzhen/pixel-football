@@ -1,3 +1,4 @@
+import {ensureFootballLife} from './football-life.mjs';
 import {LEAGUES,getTeam} from './clubs.mjs';
 import {playerAgeProfile,seasonStartYear} from './aging.mjs';
 
@@ -24,7 +25,7 @@ export function createIdentity(nameFor){
       return id;
     });
   }
-  return {rosterIds,playerData};
+  return ensureFootballLife({rosterIds,playerData},generateProspect);
 }
 
 export function generateProspect(playerData,teamId,index,year,number=index===0?1:index+5){
@@ -70,6 +71,8 @@ export function ensureIdentity(season,nameFor,career=null){
       return id;
     });
   }
+  for(const state of Object.values(season.world??{})){state.rosterIds=season.rosterIds;state.playerData=season.playerData}
+  if(season.cup){season.cup.rosterIds=season.rosterIds;season.cup.playerData=season.playerData}
   season.teamNames??={};
   season.freeAgents??=[];
   season.calendar??={startYear:seasonStartYear(season)};
@@ -102,6 +105,7 @@ export function ensureIdentity(season,nameFor,career=null){
     if(id){career.id=id;season.playerData[id].name=career.name;season.playerData[id].number=career.number;season.playerData[id].age=career.age;season.playerData[id].potential=career.potential;season.playerData[id].attributes={...season.playerData[id].attributes,...career.attributes};season.playerData[id].honors=[...new Set([...(season.playerData[id].honors??[]),...(career.honors??[])])].slice(-200);career.attributes={...season.playerData[id].attributes}}
   }
   for(const ids of Object.values(season.rosterIds)){const used=new Set();for(const id of career&&ids.includes(career.id)?[career.id,...ids.filter(other=>other!==career.id)]:ids){const player=season.playerData[id];if(used.has(player.number))player.number=Array.from({length:99},(_,i)=>i+1).find(number=>!used.has(number)&&!ids.some(other=>other!==id&&season.playerData[other].number===number));used.add(player.number)}}
+  ensureFootballLife(season,generateProspect);
   return season;
 }
 
@@ -109,6 +113,9 @@ export function activePlayers(season,teamId){return (season.rosterIds?.[teamId]?
 export function carryIdentity(oldSeason,newSeason,career=null){
   newSeason.rosterIds=structuredClone(oldSeason.rosterIds);
   newSeason.playerData=structuredClone(oldSeason.playerData);
+  newSeason.squadIds=structuredClone(oldSeason.squadIds??{});
+  newSeason.lifeEvents=structuredClone(oldSeason.lifeEvents??[]);
+  newSeason.playerRequests=structuredClone(oldSeason.playerRequests??[]);
   newSeason.freeAgents=[...new Set(oldSeason.freeAgents??[])];
   newSeason.teamNames={...oldSeason.teamNames};
   newSeason.godMode=!!oldSeason.godMode;
@@ -132,6 +139,7 @@ export function carryIdentity(oldSeason,newSeason,career=null){
     newSeason.playerData[career.id].potential=career.potential??newSeason.playerData[career.id].potential;
     newSeason.playerData[career.id].attributes={...newSeason.playerData[career.id].attributes,...career.attributes};
   }
+  ensureFootballLife(newSeason,generateProspect);
   return newSeason;
 }
 export function rosterRating(season,teamId){

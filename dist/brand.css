@@ -1,0 +1,50 @@
+/* English-only game wordmark and the pixel football badge. */
+#root > header .brand {
+  gap: 12px;
+  text-decoration: none;
+}
+
+#root > header .brand .mark {
+  width: 70px;
+  height: 44px;
+  background: transparent;
+  box-shadow: none;
+}
+
+#root > header .brand .mark img {
+  display: block;
+  width: 70px;
+  height: 44px;
+  object-fit: contain;
+}
+
+#root > header .brand strong {
+  color: #f1f5ea;
+  font-family: 'Space Grotesk', 'Arial', sans-serif;
+  font-size: 17px;
+  font-weight: 750;
+  letter-spacing: .1em;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+@media (max-width: 620px) {
+  #root > header .brand {
+    gap: 10px;
+  }
+
+  #root > header .brand .mark {
+    width: 62px;
+    height: 38px;
+  }
+
+  #root > header .brand .mark img {
+    width: 62px;
+    height: 38px;
+  }
+
+  #root > header .brand strong {
+    font-size: 14px;
+    letter-spacing: .07em;
+  }
+}

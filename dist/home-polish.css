@@ -1,0 +1,301 @@
+/* Homepage only: a more editorial matchday dashboard. */
+.hub {
+  gap: 26px;
+  max-width: 1500px;
+  margin-inline: auto;
+}
+
+.hub .hub-hero {
+  min-height: 370px !important;
+  grid-template-columns: minmax(0, 1.35fr) minmax(290px, .8fr) !important;
+  border: 1px solid #40515a;
+  border-radius: 5px;
+  background:
+    linear-gradient(115deg, #182630 0%, #131e26 58%, #101820 100%) !important;
+  box-shadow: 0 18px 48px #050a0e70, inset 0 1px #ffffff08;
+}
+
+.hub .hub-hero::before {
+  height: 4px;
+  opacity: .95;
+}
+
+.hub .hub-hero-copy {
+  padding: clamp(32px, 4vw, 58px) clamp(26px, 5vw, 68px);
+}
+
+.hub .hub-hero .section-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: #d3e0d6;
+  font-size: 11px;
+  letter-spacing: .17em;
+}
+
+.hub .hub-hero .section-kicker::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  flex: 0 0 7px;
+  background: var(--team-color, #caff70);
+  box-shadow: 0 0 14px color-mix(in srgb, var(--team-color, #caff70) 60%, transparent);
+}
+
+.hub .hub-hero h2 {
+  max-width: 13ch;
+  margin: 25px 0 12px;
+  font-size: clamp(34px, 4vw, 56px);
+  line-height: 1.08;
+  letter-spacing: -.05em;
+  text-wrap: pretty;
+}
+
+.hub .hub-hero p {
+  max-width: 48ch;
+  margin-bottom: 25px;
+  color: #b9c9cb;
+  font-size: 14px;
+  line-height: 1.8;
+}
+
+.hub .hub-hero-actions {
+  gap: 16px;
+}
+
+.hub .hub-hero-actions .primary {
+  min-height: 48px;
+  padding: 0 21px;
+  box-shadow: 0 5px 0 color-mix(in srgb, var(--team-color, #caff70) 55%, #111820);
+}
+
+.hub .hub-hero-actions .primary:hover {
+  box-shadow: 0 2px 0 color-mix(in srgb, var(--team-color, #caff70) 55%, #111820);
+}
+
+.hub .hub-hero-actions .subtle {
+  color: #d4dfdc;
+  text-decoration: underline;
+  text-decoration-color: #596b6d;
+  text-underline-offset: 5px;
+}
+
+.hub .hub-hero-copy > small {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  margin-top: 24px;
+  padding: 8px 10px;
+  border-left: 2px solid var(--team-color, #caff70);
+  background: #0d171dbd;
+  color: #a8b9b9;
+  font-variant-numeric: tabular-nums;
+}
+
+.hub .hub-hero-art {
+  isolation: isolate;
+  border-left: 1px solid #35474d;
+  background:
+    radial-gradient(ellipse at 50% 58%, color-mix(in srgb, var(--team-color, #8ac8e8) 17%, transparent), transparent 58%),
+    linear-gradient(90deg, transparent 49.8%, #b8d3c513 50%, transparent 50.2%),
+    linear-gradient(0deg, transparent 49.8%, #b8d3c513 50%, transparent 50.2%),
+    linear-gradient(150deg, #1b2a31, #10191f 76%);
+}
+
+.hub .hub-hero-art::after {
+  inset: 8% 10%;
+  border-color: #d8e5dc26;
+}
+
+.hub .hub-hero-art .locker-room {
+  opacity: .36;
+}
+
+.hub .club-crest {
+  position: relative;
+  z-index: 1;
+  filter: drop-shadow(0 18px 20px #050a0d88);
+}
+
+.hub .hero-art-caption {
+  z-index: 1;
+  padding: 8px 12px;
+  border: 1px solid #a8c4b524;
+  background: #0d171dd9;
+  color: #d2ddda;
+  font-size: 10px;
+  letter-spacing: .16em;
+}
+
+.hub .home-summary {
+  overflow: hidden;
+  border: 1px solid #35474d;
+  border-radius: 4px;
+  background: linear-gradient(110deg, #19262d, #141f26);
+  box-shadow: inset 0 1px #ffffff08;
+}
+
+.hub .home-summary > div {
+  position: relative;
+  padding: 22px 26px 24px;
+}
+
+.hub .home-summary > div + div {
+  border-left-color: #35474d;
+}
+
+.hub .home-summary h3 {
+  margin-bottom: 11px;
+  color: #aebfc0;
+  font-size: 11px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+.hub .home-summary strong {
+  color: #edf1e8;
+  font-size: clamp(22px, 2.4vw, 30px);
+  line-height: 1.25;
+  font-variant-numeric: tabular-nums;
+}
+
+.hub .home-summary p {
+  margin-top: 8px;
+  color: #9eafb1;
+}
+
+.hub .mode-showcase {
+  gap: 14px;
+}
+
+.hub .mode-card,
+.hub .mode-card.featured,
+.hub .mode-card.career {
+  position: relative;
+  min-height: 176px;
+  padding: 24px 27px;
+  border: 1px solid #394950;
+  border-radius: 4px;
+  background: linear-gradient(140deg, #19262c, #131e24 82%);
+  box-shadow: inset 0 3px var(--mode-accent), 0 5px 16px #050a0e25;
+  transition: border-color .18s ease, transform .18s ease, background .18s ease;
+  --mode-accent: #caff70;
+}
+
+.hub .mode-card.career {
+  --mode-accent: #85c9ed;
+}
+
+.hub .mode-card:hover {
+  transform: translateY(-3px);
+  border-color: color-mix(in srgb, var(--mode-accent) 55%, #394950);
+  background: linear-gradient(140deg, #1d2b32, #162128 82%);
+}
+
+.hub .mode-card > .section-kicker {
+  color: var(--mode-accent) !important;
+  font-size: 10px !important;
+  letter-spacing: .17em !important;
+}
+
+.hub .mode-card h2 {
+  margin: 19px 0 7px;
+  font-size: 22px;
+  letter-spacing: -.025em;
+}
+
+.hub .mode-card p {
+  color: #aebdc0;
+  font-size: 13px;
+}
+
+.hub .mode-card button {
+  color: #e5efdf;
+  font-size: 13px;
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--mode-accent) 60%, transparent);
+  text-underline-offset: 5px;
+}
+
+.hub .save-section {
+  padding: 0 18px;
+  border: 1px solid #35474d;
+  border-radius: 4px;
+  background: #141f25;
+}
+
+.hub .save-section[open] {
+  padding-bottom: 18px;
+}
+
+.hub .save-center-toggle {
+  padding: 16px 2px;
+  color: #b8c8c6;
+  font-size: 12px;
+}
+
+@media (max-width: 700px) {
+  .hub {
+    gap: 18px;
+  }
+
+  .hub .hub-hero {
+    grid-template-columns: 1fr !important;
+    min-height: 0 !important;
+  }
+
+  .hub .hub-hero-copy {
+    padding: 29px 23px 25px;
+  }
+
+  .hub .hub-hero h2 {
+    max-width: 100%;
+    margin: 19px 0 10px;
+    font-size: clamp(31px, 7.1vw, 42px);
+  }
+
+  .hub .hub-hero p {
+    margin-bottom: 20px;
+    font-size: 13px;
+  }
+
+  .hub .hub-hero-art {
+    min-height: 205px;
+    border-top: 1px solid #35474d;
+    border-left: 0;
+  }
+
+  .hub .hub-hero-art .club-crest {
+    width: 95px;
+    height: 112px;
+  }
+
+  .hub .hub-hero-art .club-crest span {
+    font-size: 54px;
+  }
+
+  .hub .home-summary > div {
+    padding: 17px 14px;
+  }
+
+  .hub .home-summary strong {
+    font-size: clamp(18px, 4.5vw, 24px);
+  }
+
+  .hub .mode-card,
+  .hub .mode-card.featured,
+  .hub .mode-card.career {
+    min-height: 150px;
+    padding: 21px 22px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hub .mode-card {
+    transition: none;
+  }
+
+  .hub .mode-card:hover {
+    transform: none;
+  }
+}

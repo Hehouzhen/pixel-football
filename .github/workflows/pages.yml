@@ -33,11 +33,11 @@ jobs:
       - name: Install browser for UI tests
         run: npx playwright install --with-deps chromium
 
-      - name: Test game
-        run: npm test
-
       - name: Build game
         run: npm run build
+
+      - name: Test game
+        run: npm test
 
       - name: Set up GitHub Pages
         uses: actions/configure-pages@v5

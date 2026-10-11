@@ -1,0 +1,404 @@
+/* Pixel Pitch art direction: club control room, sports desk, and career archive. */
+:root {
+  --pp-bg: #101820;
+  --pp-surface: #17232c;
+  --pp-surface-raised: #202e38;
+  --pp-line: #354853;
+  --pp-copy: #c1ced1;
+  --pp-muted: #9aabb0;
+  --pp-lime: #caff70;
+  --pp-sky: #85c9ed;
+  --pp-gold: #e2c46f;
+  --pp-alert: #ed8b79;
+}
+
+body:not(:has(.match-page)) {
+  color: #eff3ec;
+  background: var(--pp-bg);
+}
+
+body:not(:has(.match-page)) > #root > header {
+  height: 78px;
+  max-width: 1480px;
+  border-color: #2d3d46;
+  padding-inline: clamp(18px, 3vw, 42px);
+}
+
+body:not(:has(.match-page)) .brand .mark {
+  box-shadow: 3px 3px 0 #55783b;
+}
+
+body:not(:has(.match-page)) main {
+  max-width: 1480px;
+  padding: 26px clamp(18px, 3vw, 42px) 32px;
+}
+
+body:not(:has(.match-page)) .heading {
+  align-items: center;
+  margin: 0 0 16px;
+  min-height: 44px;
+}
+
+body:not(:has(.match-page)) .heading h1 {
+  font-size: clamp(25px, 3vw, 34px);
+  font-weight: 700;
+  letter-spacing: -.035em;
+}
+
+body:not(:has(.match-page)) .tag {
+  border-left: 2px solid var(--pp-lime);
+  padding: 5px 0 5px 12px;
+  color: var(--pp-copy);
+}
+
+body:not(:has(.match-page)) .panel {
+  border: 1px solid var(--pp-line);
+  border-radius: 2px;
+  background: var(--pp-surface);
+  box-shadow: 0 8px 24px #050a0e22;
+}
+
+body:not(:has(.match-page)) .panel-label,
+body:not(:has(.match-page)) .eyebrow {
+  color: #a9c0c4;
+  font-size: 11px;
+  letter-spacing: .13em;
+}
+
+body:not(:has(.match-page)) .club-copy,
+body:not(:has(.match-page)) .header-note {
+  color: var(--pp-copy);
+}
+
+body:not(:has(.match-page)) .page-tabs {
+  gap: clamp(16px, 2.5vw, 30px);
+  border-color: #354853;
+  margin-bottom: 22px;
+}
+
+body:not(:has(.match-page)) .page-tabs button {
+  min-height: 44px;
+  color: #b7c6c9;
+}
+
+body:not(:has(.match-page)) .page-tabs button.active {
+  color: #f4f7f0;
+  box-shadow: inset 0 -3px var(--pp-lime);
+}
+
+body:not(:has(.match-page)) button:focus-visible,
+body:not(:has(.match-page)) select:focus-visible,
+body:not(:has(.match-page)) input:focus-visible {
+  outline-color: var(--pp-lime);
+}
+
+body:not(:has(.match-page)) .primary {
+  min-height: 46px;
+  border-radius: 2px;
+  box-shadow: 0 3px 0 #86ae45;
+  letter-spacing: .01em;
+}
+
+body:not(:has(.match-page)) .subtle,
+body:not(:has(.match-page)) .icon-button {
+  border-radius: 2px;
+}
+
+body:not(:has(.match-page)) .hub-hero {
+  min-height: 350px !important;
+  border: 1px solid #40535d;
+  background: #17232c !important;
+  box-shadow: 6px 6px 0 #080e13;
+}
+
+body:not(:has(.match-page)) .hub-hero h2 {
+  max-width: 11ch;
+  font-size: clamp(34px, 4.4vw, 60px);
+  letter-spacing: -.045em;
+}
+
+body:not(:has(.match-page)) .hub-hero-art {
+  border-left-color: #40535d;
+  background-color: #1c2b35;
+}
+
+body:not(:has(.match-page)) .mode-card {
+  min-height: 180px;
+  border-radius: 2px;
+  border-color: #40535d;
+  background: #17232c;
+}
+
+body:not(:has(.match-page)) .mode-card:after {
+  display: none;
+}
+
+body:not(:has(.match-page)) .mode-card.featured {
+  border-top: 3px solid var(--pp-lime);
+  background: #1b2a30;
+}
+
+body:not(:has(.match-page)) .mode-card.career {
+  border-top: 3px solid var(--pp-sky);
+}
+
+body:not(:has(.match-page)) .save-section {
+  border: 0;
+  border-top: 1px solid #455861;
+  border-radius: 0;
+  padding: 24px 0 0;
+  background: transparent;
+}
+
+body:not(:has(.match-page)) .save-card {
+  border-radius: 2px;
+  border-color: #40535d;
+  background: #17232c;
+}
+
+body:not(:has(.match-page)) .save-card.empty {
+  border-style: dashed;
+  background: #131e26;
+}
+
+body:not(:has(.match-page)) .save-meta span {
+  border-radius: 2px;
+  border-color: #455a62;
+  color: #c1ced1;
+}
+
+body:not(:has(.match-page)) .club-dashboard .club-overview,
+body:not(:has(.match-page)) .career-overview {
+  background: #17232c;
+  border-color: #40535d;
+}
+
+body:not(:has(.match-page)) .fixture-card {
+  border-radius: 2px;
+  border-color: #748d60;
+  background: linear-gradient(110deg, #22353a, #1a2931 68%);
+}
+
+body:not(:has(.match-page)) .club-snapshot b,
+body:not(:has(.match-page)) .season-stats b,
+body:not(:has(.match-page)) .leader-row b,
+body:not(:has(.match-page)) .result-row b {
+  font-variant-numeric: tabular-nums;
+}
+
+body:not(:has(.match-page)) .club-side .panel {
+  padding: 20px;
+  background: #141f27;
+}
+
+body:not(:has(.match-page)) .club-side table,
+body:not(:has(.match-page)) .stats-table {
+  font-variant-numeric: tabular-nums;
+}
+
+body:not(:has(.match-page)) .club-side th,
+body:not(:has(.match-page)) .stats-table th {
+  background: #20313a;
+  color: #c4d2d3;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+body:not(:has(.match-page)) .club-side td,
+body:not(:has(.match-page)) .stats-table td {
+  color: #e0e8e5;
+}
+
+body:not(:has(.match-page)) .club-side tbody tr:nth-child(even),
+body:not(:has(.match-page)) .stats-table tbody tr:nth-child(even) {
+  background: #1a2931;
+}
+
+body:not(:has(.match-page)) .club-side .mine,
+body:not(:has(.match-page)) .stats-table tbody tr.expanded {
+  background: #293a35;
+}
+
+body:not(:has(.match-page)) .stats-center {
+  padding: clamp(20px, 3vw, 34px);
+  background: #141f27;
+}
+
+body:not(:has(.match-page)) .stats-center h2 {
+  font-size: clamp(24px, 3vw, 32px);
+  letter-spacing: -.03em;
+}
+
+body:not(:has(.match-page)) .stats-intro,
+body:not(:has(.match-page)) .stats-scope,
+body:not(:has(.match-page)) .stats-definition,
+body:not(:has(.match-page)) .stats-provenance {
+  color: #b9c8cb;
+  font-size: 13px;
+}
+
+body:not(:has(.match-page)) .stats-query {
+  border-color: #3b4e57;
+}
+
+body:not(:has(.match-page)) .stats-results-head h3,
+body:not(:has(.match-page)) .stats-query h3 {
+  color: #f1f4ec;
+}
+
+body:not(:has(.match-page)) .stats-table-wrap {
+  border-color: #40535d;
+}
+
+body:not(:has(.match-page)) .stats-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+body:not(:has(.match-page)) .stats-table td:first-child {
+  color: #aebfc2;
+}
+
+body:not(:has(.match-page)) .stats-table .stats-value {
+  color: #d9ffa0;
+  font-size: 15px;
+}
+
+body:not(:has(.match-page)) .historical-leaders .stats-player-link {
+  color: #e4d18c;
+}
+
+body:not(:has(.match-page)) .career-dossier {
+  background: #111c23;
+}
+
+body:not(:has(.match-page)) .news-page {
+  --paper: #eee7d5;
+  --ink: #17232c;
+  --red: #aa3938;
+  max-width: 1560px;
+  margin: 0 auto;
+  padding-top: clamp(20px, 3vw, 38px);
+  box-shadow: 8px 8px 0 #070c10;
+}
+
+body:not(:has(.match-page)) .news-masthead {
+  padding-block: 24px 18px;
+}
+
+body:not(:has(.match-page)) .news-logo-mark {
+  image-rendering: pixelated;
+}
+
+body:not(:has(.match-page)) .news-article h1 {
+  font-size: clamp(30px, 4.2vw, 54px);
+  line-height: 1.3;
+}
+
+body:not(:has(.match-page)) .news-score {
+  border-width: 2px;
+}
+
+body:not(:has(.match-page)) .news-archive button.selected {
+  background: #ded2b8;
+  box-shadow: inset 3px 0 var(--red);
+}
+
+body:not(:has(.match-page)) .awards-page {
+  min-height: 100vh;
+  padding-top: clamp(28px, 5vw, 58px);
+  background: radial-gradient(ellipse at 50% 0, #3b3c31 0, #17232b 52%, #101820 100%);
+}
+
+body:not(:has(.match-page)) .awards-page h1 {
+  width: min(100%, 1000px);
+  font-family: "Microsoft YaHei", "Arial", sans-serif;
+  font-size: clamp(34px, 5.6vw, 68px);
+  line-height: 1.22;
+  letter-spacing: -.035em;
+  text-wrap: balance;
+}
+
+body:not(:has(.match-page)) .awards-stage {
+  gap: clamp(20px, 4vw, 48px);
+}
+
+body:not(:has(.match-page)) .awards-list section {
+  border-color: #8e7b4d;
+  border-radius: 2px;
+  background: #242e31;
+}
+
+body:not(:has(.match-page)) .awards-list strong {
+  font-family: "Microsoft YaHei", "Arial", sans-serif;
+}
+
+body:not(:has(.match-page)) .awards-lineup article {
+  border-top-color: var(--pp-gold);
+  background: #1a2830;
+}
+
+body:not(:has(.match-page)) .footer {
+  border-color: #2d3d46;
+  color: #9aabb0;
+}
+
+@media (max-width: 800px) {
+  body:not(:has(.match-page)) main {
+    padding: 20px 16px 28px;
+  }
+
+  body:not(:has(.match-page)) .hub-hero {
+    box-shadow: 3px 3px 0 #080e13;
+  }
+
+  body:not(:has(.match-page)) .club-side .panel {
+    padding: 16px;
+  }
+}
+
+@media (max-width: 620px) {
+  body:not(:has(.match-page)) > #root > header {
+    height: 68px;
+    padding-inline: 14px;
+  }
+
+  body:not(:has(.match-page)) .heading h1 {
+    font-size: 25px;
+  }
+
+  body:not(:has(.match-page)) .tag {
+    display: none;
+  }
+
+  body:not(:has(.match-page)) .mode-card {
+    min-height: 150px;
+  }
+
+  body:not(:has(.match-page)) .hub-hero h2 {
+    max-width: 100%;
+    font-size: clamp(30px, 6vw, 38px);
+    word-break: keep-all;
+  }
+
+  body:not(:has(.match-page)) .news-page {
+    padding-inline: 16px;
+    box-shadow: none;
+  }
+
+  body:not(:has(.match-page)) .awards-page {
+    padding-inline: 16px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body:not(:has(.match-page)) *,
+  body:not(:has(.match-page)) *::before,
+  body:not(:has(.match-page)) *::after {
+    scroll-behavior: auto !important;
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}

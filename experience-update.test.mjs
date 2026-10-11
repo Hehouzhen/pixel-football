@@ -3,6 +3,16 @@ import {Match} from './engine.mjs';
 import {createCareerPlayer,finishCareerMatch,playerRating,ratingBreakdown,levelProgress,toggleMatchMemory} from './career.mjs';
 import {LEAGUES,createSeason,currentFixture,simulate,simulateFixture,simulateWeek} from './league.mjs';
 import {makeCareerSlot,exportBackup,importBackup} from './save-slots.mjs';
+import {matchTip,shotAdvice} from './experience.mjs';
+
+assert.match(matchTip({hasBall:true,shotOpen:true}),/射门范围/);
+assert.match(matchTip({hasBall:true,pressure:true}),/横向摆脱/);
+assert.match(matchTip({hasBall:true,stamina:.19,pressure:true}),/体能偏低/);
+assert.match(matchTip({opponentHasBall:true}),/正面/);
+assert.equal(matchTip({}), '');
+assert.match(shotAdvice({outcome:'blocked',pressured:true}),/有人贴近/);
+assert.match(shotAdvice({outcome:'wide'}),/瞄准点/);
+assert.match(shotAdvice({outcome:'woodwork'}),/门框/);
 
 const neutral=createCareerPlayer('回归样本',29,'forward'),idle=finishCareerMatch(neutral,{},[0,0],180),active=finishCareerMatch(neutral,{goals:1,shots:2,shotsOnTarget:1},[1,0],180);
 assert.equal(idle.lastMatch.xpGain,15);assert(active.lastMatch.xpGain>idle.lastMatch.xpGain);

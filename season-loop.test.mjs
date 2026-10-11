@@ -10,6 +10,12 @@ import {nextCeremony,recordCeremonyHonors} from './awards.mjs';
 function assertMatchGoals(match){
   assert.deepEqual(match.score,[0,1].map(side=>match.playerStats.filter(row=>row.teamId===(side===0?match.home:match.away)).reduce((sum,row)=>sum+(row.goals??0),0)),'player goals must equal the match score');
   assert.equal(match.goalEvents.length,match.score[0]+match.score[1],'goal events must equal the match score');
+  assert.equal(typeof match.seasonId,'string','every new match should identify its season');
+  assert.equal(typeof match.matchId,'string','every new match should have a stable ID');
+  assert([120,180,300].includes(match.duration),'each match should preserve its duration');
+  assert.equal(new Set(match.playerStats.map(row=>row.playerId)).size,12,'each match should preserve twelve stable player identities');
+  assert.equal(match.lineups.length,2,'each match should save both lineups');
+  for(const lineup of match.lineups){const players=match.playerStats.filter(row=>row.teamId===lineup.teamId).sort((a,b)=>a.index-b.index);assert.deepEqual(lineup.playerIds,players.map(row=>row.playerId));assert.equal(players.length,6);for(const player of players){assert.equal(player.started,true);assert.equal(player.minuteOn,0);assert(player.minuteOff>=player.minuteOn&&player.minuteOff<=90);assert(player.minutesPlayed>=0&&player.minutesPlayed<=90);if(player.playingSeconds>0)assert.equal(player.minutesPlayed,Math.round(player.playingSeconds/match.duration*90));if(player.reds>0)assert(player.minuteOff<90,'a dismissed simulated player should have an exit minute')}}
 }
 
 function simulateCareerRound(season,career){
@@ -85,7 +91,8 @@ function fullSeason(){
   for(const [id,count] of appearances)assert.equal(season.playerData[id].careerStats.appearances,count,`career appearances must reconcile for ${id}`);
   for(const [id,count] of goals)assert.equal(season.playerData[id].careerStats.goals,count,`career goals must reconcile for ${id}`);
 
-  const data={version:2,active:0,slots:[makeClubSlot(season),null,null]},raw=JSON.stringify(data),storage={value:null,getItem(key){return key===SAVE_KEY?this.value:null},setItem(key,value){if(key===SAVE_KEY)this.value=value}};
+  const data={version:2,active:0,slots:[makeClubSlot(season),null,null]},raw=JSON.stringify(data),backup=exportBackup(data),storage={value:null,getItem(key){return key===SAVE_KEY?this.value:null},setItem(key,value){if(key===SAVE_KEY)this.value=value}};
+  assert(Buffer.byteLength(backup)<Buffer.byteLength(raw)*.8,'full-season backups should omit enough duplicate identity data to reduce size by at least 20%');
   saveSaveData(data,storage);
   assert(storage.value.startsWith('lz:'),'local saves should be compressed');
   assert(storage.value.length<5*1024*1024,'full-season save should fit in browser local storage');
@@ -96,7 +103,7 @@ function fullSeason(){
   const multiSlot=exportBackup({version:2,active:0,slots:[makeClubSlot(season),makeClubSlot(season),null]});
   assert(Buffer.byteLength(multiSlot)>8_000_000,'multi-slot backup should exceed the old size ceiling');
   assert.equal(importBackup(multiSlot).slots.filter(Boolean).length,2,'multi-slot season backup should remain restorable');
-  return {leagueMatches:season.results.length,worldMatches:Object.values(season.world).reduce((sum,state)=>sum+state.results.length,0),cupMatches:season.cup.results.length,rawSaveBytes:Buffer.byteLength(raw),compressedCharacters:storage.value.length,multiSlotBackupBytes:Buffer.byteLength(multiSlot)};
+  return {leagueMatches:season.results.length,worldMatches:Object.values(season.world).reduce((sum,state)=>sum+state.results.length,0),cupMatches:season.cup.results.length,rawSaveBytes:Buffer.byteLength(raw),compactBackupBytes:Buffer.byteLength(backup),compressedCharacters:storage.value.length,multiSlotBackupBytes:Buffer.byteLength(multiSlot)};
 }
 
 if(process.argv[1]&&import.meta.url===pathToFileURL(resolve(process.argv[1])).href){

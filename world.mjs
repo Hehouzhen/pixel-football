@@ -1,3 +1,5 @@
+import {advanceContracts,ensureFootballLife,squadPlayers,wageBudget} from './football-life.mjs';
+import {generateProspect} from './identity.mjs';
 import {LEAGUES,getTeam,prepareSeason,retireAgedPlayers} from './league.mjs';
 import {activePlayers,rosterRating,teamName} from './identity.mjs';
 import {advanceSeasonAges} from './aging.mjs';
@@ -5,8 +7,8 @@ import {value,wage} from './transfers.mjs';
 
 const hash=text=>{let n=2166136261;for(const char of String(text)){n^=char.charCodeAt(0);n=Math.imul(n,16777619)}return n>>>0};
 const seasonNumber=season=>(season.history?.length??0)+1;
-const teamWages=(season,teamId)=>activePlayers(season,teamId).reduce((sum,player)=>sum+wage(player),0);
-const teamCap=teamId=>14+(getTeam(teamId)?.strength??1)*2;
+const teamWages=(season,teamId)=>squadPlayers(season,teamId).reduce((sum,player)=>sum+wage(player),0);
+const teamCap=wageBudget;
 
 export function ensureWorldMarket(season){
   const year=season.calendar?.startYear??2026+(season.history?.length??0);
@@ -64,12 +66,14 @@ export function advancePlayerWorld(season,{managedTeamId=season.teamId,career=nu
   const market=ensureWorldMarket(season),before=new Map(Object.values(season.playerData).map(player=>[player.id,{age:player.age,attributes:{...player.attributes}}]));
   advanceSeasonAges(season,career);
   retireAgedPlayers(season,year);
+  advanceContracts(season,generateProspect,career?.id);
   const retirements=(season.retirements??[]).filter(event=>event.year===year);
   const opened=year>=market.nextYear,transfers=[];
   if(opened){
     for(const league of LEAGUES){const deal=marketDeal(season,league,year,managedTeamId,career?.id);if(deal)transfers.push(deal)}
     market.lastYear=year;market.nextYear=year+2+hash(`${season.seed??0}:${year}:next-market`) % 3;
   }
+  ensureFootballLife(season,generateProspect);
   const development={improved:0,declined:0,aged:0};
   for(const player of Object.values(season.playerData)){
     const old=before.get(player.id);if(!old||player.retired)continue;

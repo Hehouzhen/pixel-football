@@ -9,7 +9,7 @@ export function celebrationPose(kind,phase,direction=1){
   }
   if(kind===2){
     if(t<.2)return {row:0,col:0,dx:0,dy:5,rotation:0,scaleX:1,scaleY:.88,dust:false};
-    if(t<.84){const jump=(t-.2)/.64;return {row:3,col:jump<.5?2:4,dx:0,dy:-Math.sin(jump*Math.PI)*20,rotation:0,scaleX:1,scaleY:1,flip:jump>=.5,back:jump>.42&&jump<.72,dust:false}}
+    if(t<.84){const jump=(t-.2)/.64,yaw=Math.cos(jump*Math.PI*2);return {row:3,col:jump<.25?2:jump<.75?3:4,dx:0,dy:-Math.sin(jump*Math.PI)*20,rotation:0,scaleX:.16+.84*Math.abs(yaw),scaleY:1,flip:yaw<0,back:yaw<0,dust:false}}
     if(t<1.03)return {row:0,col:0,dx:0,dy:4,rotation:0,scaleX:1,scaleY:.82,dust:true};
     return {row:3,col:3,dx:0,dy:0,rotation:0,scaleX:1,scaleY:1,dust:false};
   }
