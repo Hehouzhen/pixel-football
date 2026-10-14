@@ -3,7 +3,7 @@ import {Match} from './engine.mjs';
 import {createSeason,simulateFixture,keeperLeaders,getTeam} from './league.mjs';
 import {archiveSeason,upsertSeasonHistory,allTimePlayerLeaders,playerCareerDossier} from './history.mjs';
 import {generateProspect} from './identity.mjs';
-import {inquiry,offers,counterNegotiation,startNegotiation,finances} from './transfers.mjs';
+import {inquiry,offers,startNegotiation,finances} from './transfers.mjs';
 import {handlePassInput} from './match-input.mjs';
 
 const careerPass=new Match({careerIndex:5});careerPass.state='playing';careerPass.ball.owner=3;
@@ -62,8 +62,8 @@ assert.deepEqual([playerCareerDossier(history,'p').totals.appearances,playerCare
 
 let transferSeason=createSeason('england','arsenal',17);
 const target=offers(transferSeason).find(item=>item.position===5&&item.allowed&&item.fee<=finances(transferSeason).balance&&finances(transferSeason).wages-item.outgoingWage+item.wageExpectation<=finances(transferSeason).wageCap);
-const market=inquiry(transferSeason,target.id);let negotiation=startNegotiation(transferSeason,target.id,{outgoingId:target.outgoingId,fee:1,salary:market.wageExpectation});
-negotiation=counterNegotiation(negotiation.season,negotiation.talk.id,{});transferSeason=negotiation.season;
+const market=inquiry(transferSeason,target.id);const negotiation=startNegotiation(transferSeason,target.id,{outgoingId:target.outgoingId,fee:market.askingFee,salary:market.wageExpectation});
+assert.equal(negotiation.talk.status,'accepted');transferSeason=negotiation.season;
 const incoming=transferSeason.playerData[target.id].transferHistory.at(-1),outgoing=transferSeason.playerData[target.outgoingId].transferHistory.at(-1);
 assert.deepEqual([incoming.from,incoming.to,incoming.fromName,incoming.toName],[target.from,'arsenal',getTeam(target.from).name,'Arsenal']);
 assert.deepEqual([outgoing.from,outgoing.to,outgoing.fromName,outgoing.toName],['arsenal',target.from,'Arsenal',incoming.fromName],'both transfer-history entries follow each player from their old club to their new club');

@@ -1,4 +1,6 @@
 import {PracticeMatch} from './practice.mjs';
+await import('./simulation.test.mjs');
+await import('./appearance.test.mjs');
 await import('./news.test.mjs');
 await import('./identity.test.mjs');
 await import('./football-life.test.mjs');
@@ -7,6 +9,8 @@ await import('./storage-compaction.test.mjs');
 await import('./stats.test.mjs');
 await import('./player-attributes.test.mjs');
 await import('./aging.test.mjs');
+await import('./career-development.test.mjs');
+await import('./season-preparation.test.mjs');
 await import('./world.test.mjs');
 await import('./weather.test.mjs');
 await import('./result-info.test.mjs');
@@ -14,8 +18,15 @@ await import('./god-mode.test.mjs');
 import {shotAdvice} from './experience.mjs';
 await import('./experience-update.test.mjs');
 await import('./career-story.test.mjs');
+await import('./academy.test.mjs');
+await import('./world-history.test.mjs');
+await import('./club-challenge.test.mjs');
 await import('./career-transfers.test.mjs');
 await import('./career-role.test.mjs');
+await import('./dream-team.test.mjs');
+await import('./dream-rating-model.test.mjs');
+await import('./dream-simulation-calibration.test.mjs');
+await import('./dream-signing.test.mjs');
 await import('./tactics.test.mjs');
 await import('./season-features.test.mjs');
 import assert from 'node:assert/strict';
@@ -74,7 +85,7 @@ assert.equal(match({difficulty:0}).pressers(1),1);assert.equal(match({difficulty
 
 m=match({careerIndex:1,careerAttributes:{shooting:52,passing:58,defense:70}});assert.equal(m.selected[0],1);m.ball.owner=5;assert(m.requestPass());assert.equal(m.selected[0],1);assert.equal(m.stats[5].passes,1);m.reset(1);assert.equal(m.selected[0],1);
 for(let i=0;i<9000;i++)m.step(.02);assert.equal(m.state,'ended');assert.equal(m.selected[0],1);
-let player=createCareerPlayer('测试球员',4,'defender');player.xp=95;player=finishCareerMatch(player,{tackles:3,passes:4,passesCompleted:3,distance:80},[1,0],180);assert.equal(player.level,2);assert.equal(player.attributes.defense,70);assert.equal(player.trainingPoints,2);assert.equal(player.stats.appearances,1);assert.equal(player.stats.tackles,3);
+let player=createCareerPlayer('测试球员',4,'defender');player.xp=95;player=finishCareerMatch(player,{tackles:3,passes:4,passesCompleted:3,distance:80},[1,0],180);assert.equal(player.level,2);assert.equal(player.attributes.defense,70);assert.equal(player.trainingPoints,0);assert.equal(player.stats.appearances,1);assert.equal(player.stats.tackles,3);
 
 assert.equal(LEAGUES.length,5);
 assert.equal(new Set([...LEAGUES,...LEGACY_LEAGUES].flatMap(item=>item.teams.map(team=>team.id))).size,[...LEAGUES,...LEGACY_LEAGUES].reduce((sum,item)=>sum+item.teams.length,0),'新增俱乐部 ID 不得覆盖旧联赛球队');
@@ -99,7 +110,7 @@ for(const group of season.cup.groups){const matches=season.cup.fixtures.flat().f
 let played=0;while(cupNextMatch(season)){completeCupMatch(season,[2,0],Array.from({length:12},(_,i)=>({goals:i===5?2:0})),null);played++}
 assert.equal(played,9);assert.equal(season.cup.phase,'complete');assert.equal(season.cup.champion,season.teamId);assert.equal(season.cup.results.length,53);
 const playedCupResult=season.cup.results.find(result=>result.source==='played');assert(playedCupResult.matchId&&playedCupResult.seasonId);assert.equal(playedCupResult.playerStats.length,12);assert.deepEqual(playedCupResult.lineups.find(line=>line.teamId===season.teamId).playerIds,season.rosterIds[season.teamId]);
-for(const teamId of season.cup.teams){const goals=season.cup.results.reduce((sum,result)=>sum+(result.home===teamId?result.score[0]:result.away===teamId?result.score[1]:0),0),playerGoals=season.rosterIds[teamId].reduce((sum,id)=>sum+(season.cup.players[id]?.goals??0),0);assert.equal(playerGoals,goals,`${teamId} 欧冠进球应与球队比分一致`)}
+for(const teamId of season.cup.teams){const goals=season.cup.results.reduce((sum,result)=>sum+(result.home===teamId?result.score[0]:result.away===teamId?result.score[1]:0),0),playerGoals=Object.entries(season.cup.players).filter(([id])=>season.playerData[id]?.teamId===teamId).reduce((sum,[,stats])=>sum+(stats.goals??0),0);assert.equal(playerGoals,goals,`${teamId} 欧冠进球应与球队比分一致`)}
 assert.equal(season.cup.names[`${season.teamId}:5`],'测试球员');
 const aggregateCup=createSeason('england','arsenal',91),cupTeams=LEAGUES.flatMap(item=>item.teams.slice(0,4).map(team=>team.id));aggregateCup.cup={formatVersion:2,phase:'quarterfinal',round:0,teams:cupTeams,quarters:[[[...['arsenal','mancity']],['liverpool','chelsea'],['manutd','tottenham'],['newcastle','astonvilla']],[['mancity','arsenal'],['chelsea','liverpool'],['tottenham','manutd'],['astonvilla','newcastle']]],results:[],players:{},rosterIds:aggregateCup.rosterIds,playerData:aggregateCup.playerData,names:{},semis:null,final:null};assert.equal(cupNeedsShootout(aggregateCup,[0,0]),false,'八强首回合平局不应直接点球');completeCupMatch(aggregateCup,[1,0],Array.from({length:12},()=>({})),null);assert.equal(aggregateCup.cup.round,1);assert.equal(cupNeedsShootout(aggregateCup,[0,1]),true,'两回合总比分平局应点球');assert.equal(cupNeedsShootout(aggregateCup,[1,0]),false,'总比分领先不应点球');
 const storage={values:new Map(),getItem(k){return this.values.get(k)??null},setItem(k,v){this.values.set(k,v)}};
@@ -146,7 +157,7 @@ const look={skin:'#ebbd89',hair:'#302b24',hairstyle:3,shoes:'#ffffff',sleeve:'lo
 m=match({careerIndex:5,careerNumber:27});m.kick(5,true,.8);m.goal(0);const recorded=m.report();newPlayer=finishCareerMatch(newPlayer,m.stats[5],m.score,120,{report:recorded,season:1,opponent:'测试队',objective:m.objective});assert.equal(newPlayer.history.length,1);assert(newPlayer.honors.includes('首次进球'));assert.equal(newPlayer.stats.goals,1);
 const newBackup={version:2,active:0,slots:[makeCareerSlot(createSeason(league.id,league.teams[0].id),newPlayer),null,null]},restoredCareer=importBackup(exportBackup(newBackup)).slots[0].player;assert.equal(restoredCareer.id,'p:arsenal:5');assert.equal(restoredCareer.name,newPlayer.name);assert.equal(restoredCareer.age,18);assert.equal(restoredCareer.trainingPoints,0);assert.equal(restoredCareer.potential,newPlayer.potential);
 const woodworkBackup=structuredClone(newBackup);woodworkBackup.slots[0].player.history[0].report.shots[0].outcome='woodwork';assert.equal(importBackup(exportBackup(woodworkBackup)).slots[0].player.history[0].report.shots[0].outcome,'woodwork');
-let invalid=structuredClone(newBackup);invalid.slots[0].player.history[0].report.shots[0].x=2;assert.throws(()=>importBackup(exportBackup(invalid)));invalid=structuredClone(newBackup);invalid.slots[0].player.appearance.hairstyle=20;assert.throws(()=>importBackup(exportBackup(invalid)));
+let invalid=structuredClone(newBackup);invalid.slots[0].player.history[0].report.shots[0].x=2;assert.throws(()=>importBackup(exportBackup(invalid)));invalid=structuredClone(newBackup);invalid.slots[0].player.appearance.hairstyle=24;assert.throws(()=>importBackup(exportBackup(invalid)));
 for(let i=0;i<6;i++)newPlayer=finishCareerMatch(newPlayer,{},[0,0],120,{report:recorded});assert(newPlayer.history[0].report.heat,'career best performance retains its detailed report');assert(newPlayer.history.at(-1).report.heat);assert(recorded.heat,'history pruning must preserve the original report');
 let archivePlayer=createCareerPlayer('年鉴',27,'forward');for(let i=0;i<45;i++)archivePlayer=finishCareerMatch(archivePlayer,{goals:1},[1,0],120,{season:i<30?1:2});assert.equal(archivePlayer.history.length,45);assert.equal(archivePlayer.seasonLedger[1].appearances,30);assert.equal(archivePlayer.seasonLedger[2].goals,15);assert.equal(archivePlayer.stats.goals,45);assert.equal(archivePlayer.history.at(-1).shooting,archivePlayer.attributes.shooting);
 const archiveBackup={version:2,active:0,slots:[makeCareerSlot(createSeason(LEAGUES[0].id,LEAGUES[0].teams[0].id),archivePlayer),null,null]};assert.equal(importBackup(exportBackup(archiveBackup)).slots[0].player.history.length,45);const brokenLedger=structuredClone(archiveBackup);brokenLedger.slots[0].player.seasonLedger[1].goals=-1;assert.throws(()=>importBackup(exportBackup(brokenLedger)));
@@ -161,7 +172,7 @@ console.log('PASS: playable style differences and league report backup validatio
 
 // Simulation advances exactly one round, preserves home/away orientation and persists totals.
 const simSeason=createSeason(league.id,league.teams[0].id,77);for(let week=0;week<2;week++){const fixture=currentFixture(simSeason),expected=simulateFixture(simSeason,...fixture,week);simulateWeek(simSeason);const own=simSeason.results.find(r=>r.week===week&&(r.home===simSeason.teamId||r.away===simSeason.teamId));assert.deepEqual(own.score,expected.score);assert.deepEqual(own.stats,expected.stats);assert.equal(own.source,'simulated');assert.equal(own.report,undefined);assert.equal(simSeason.week,week+1);assert.equal(simSeason.results.length,8*(week+1));assert.equal(simSeason.world.spain.results.length,8*(week+1));assert.equal(own.playerStats.filter(p=>p.teamId===own.home).reduce((n,p)=>n+(p.goals??0),0),own.score[0]);assert.equal(own.playerStats.filter(p=>p.teamId===own.away).reduce((n,p)=>n+(p.goals??0),0),own.score[1]);assert.equal(own.goalEvents.length,own.score[0]+own.score[1])}
-const simulatedTotals=Object.entries(simSeason.players).filter(([id])=>simSeason.rosterIds[simSeason.teamId].includes(id)).reduce((n,[,p])=>n+p.goals,0);assert.equal(simulatedTotals,seasonSummary(simSeason).goalsFor);assert.equal(importBackup(exportBackup({version:2,active:0,slots:[makeClubSlot(simSeason),null,null]})).slots[0].season.week,2);while(currentFixture(simSeason))simulateWeek(simSeason);assert(simSeason.awards);simSeason.teamId=standings(simSeason)[0].id;startCup(simSeason);assert(simSeason.cup);assert.throws(()=>simulateWeek(simSeason));
+const simulatedTotals=Object.entries(simSeason.players).filter(([id])=>simSeason.rosterIds[simSeason.teamId].includes(id)).reduce((n,[,p])=>n+p.goals,0);assert.equal(simulatedTotals,seasonSummary(simSeason).goalsFor);assert.equal(importBackup(exportBackup({version:2,active:0,slots:[makeClubSlot(simSeason),null,null]})).slots[0].season.week,2);while(currentFixture(simSeason))simulateWeek(simSeason);assert(simSeason.awards);simSeason.teamId=[...LEAGUES.find(item=>item.id===simSeason.leagueId).teams].sort((a,b)=>b.strength-a.strength)[0].id;startCup(simSeason);assert(simSeason.cup);assert.throws(()=>simulateWeek(simSeason));
 const cupPair=cupNextMatch(simSeason),cupHome=cupPair[0],cupAway=cupPair[1],cupFixture=simulateFixture(simSeason,cupHome,cupAway,30+simSeason.cup.round,'cup'),cupHomeIsUser=cupHome===simSeason.teamId,cupScore=cupHomeIsUser?cupFixture.score:[...cupFixture.score].reverse(),cupStats=orientStats(cupFixture.stats,cupHomeIsUser),cupShootout=cupNeedsShootout(simSeason,cupScore)?simulateShootout(simSeason,cupHome,cupAway,30+simSeason.cup.round):null;completeCupMatch(simSeason,cupScore,null,cupStats,cupShootout,null,{...cupFixture,source:'simulated'});const savedCup=simSeason.cup.results.find(r=>r.home===cupHome&&r.away===cupAway);assert.equal(savedCup.source,'simulated');assert.equal(savedCup.competition,'cup');assert.equal(savedCup.playerStats.filter(p=>p.teamId===cupHome).reduce((n,p)=>n+(p.goals??0),0),savedCup.score[0]);assert.equal(savedCup.playerStats.filter(p=>p.teamId===cupAway).reduce((n,p)=>n+(p.goals??0),0),savedCup.score[1]);assert.equal(savedCup.playerStats[0].playerName,simSeason.playerData[savedCup.playerStats[0].playerId].name,'match rows keep the player name at the time of the match');assert.equal(savedCup.goalEvents.length,savedCup.score[0]+savedCup.score[1]);const cupBackup={version:2,active:0,slots:[makeClubSlot(simSeason),null,null]};assert(importBackup(exportBackup(cupBackup)));const legacyNamedBackup=structuredClone(cupBackup);for(const result of legacyNamedBackup.slots[0].season.cup.results)for(const row of result.playerStats??[])delete row.playerName;assert(importBackup(exportBackup(legacyNamedBackup)),'older match rows without a name snapshot remain valid');const badPlayerName=structuredClone(cupBackup);badPlayerName.slots[0].season.cup.results.find(r=>r.playerStats?.length).playerStats[0].playerName='x'.repeat(101);assert.throws(()=>importBackup(exportBackup(badPlayerName)));const badSimulation=structuredClone(cupBackup);badSimulation.slots[0].season.cup.results.find(r=>r.home===cupHome&&r.away===cupAway).score[0]++;assert.throws(()=>importBackup(exportBackup(badSimulation)),'score and player goal totals must stay consistent');
 console.log('PASS: one-round simulation, home/away scores, standings, player totals, backups and cup qualification.');
 
@@ -227,3 +238,5 @@ for(let i=1;i<10;i++){practiceTimeout.resetAttempt();practiceTimeout.completeAtt
 for(const difficulty of [0,1,2,3]){const p=new PracticeMatch({scenario:'receive',defender:true,difficulty});for(let i=0;i<35;i++)p.step(.016);assert.equal(p.state,'playing');assert.equal(p.ball.owner,3,'the optional defender must not steal before the feed');p.players[5].stamina=.2;p.resetAttempt();assert.equal(p.players[5].stamina,1);p.foul(11,5);assert.equal(p.attempts.at(-1).outcome,'foul');assert.equal(p.stats[11].reds,0)}
 await import('./replay.test.mjs');
 await import('./transfer-ai.test.mjs');
+await import('./market-upgrade.test.mjs');
+await import('./multi-season-integrity.test.mjs');

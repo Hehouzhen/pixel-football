@@ -1,10 +1,13 @@
+import {recordRecovery} from './recovery.mjs';
 import {getTeam} from './clubs.mjs';
+import {positionRating} from './ratings.mjs';
+import {initialTraits,recordChemistry} from './player-context.mjs';
 
 export const SQUAD_ROLES={starter:'常规首发',rotation:'轮换球员',prospect:'培养对象'};
 export const positionGroup=index=>index===0?0:index<3?1:index<5?3:5;
 export const lifeYear=season=>season.calendar?.startYear??2026;
 const hash=text=>{let n=2166136261;for(const c of String(text)){n^=c.charCodeAt(0);n=Math.imul(n,16777619)}return n>>>0};
-export function playerQuality(p){const a=p.attributes;return Math.round(p.position===0?a.goalkeeping*.75+a.passing*.1+a.speed*.15:p.position<3?a.defense*.45+a.passing*.2+a.speed*.25+a.shooting*.1:p.position<5?a.passing*.4+a.shooting*.2+a.defense*.15+a.speed*.25:a.shooting*.45+a.speed*.3+a.passing*.2+a.defense*.05)}
+export const playerQuality=positionRating;
 export const estimatedWage=p=>+(Math.max(1,(playerQuality(p)-45)*.48)**1.15*.12).toFixed(1);
 export const squadPlayers=(season,teamId)=>[...new Set([...(season.squadIds?.[teamId]??[]),...(season.rosterIds?.[teamId]??[])])].map(id=>season.playerData[id]).filter(p=>p&&!p.retired&&!p.freeAgent&&p.teamId===teamId);
 export const annualWage=p=>p.contractWage??estimatedWage(p);
@@ -21,6 +24,7 @@ export function lifeEvent(season,type,playerId,text,key){
 
 export function ensureFootballLife(season,generate){
   season.squadIds??={};season.lifeEvents??=[];season.playerRequests??=[];
+  for(const p of Object.values(season.playerData))p.traits??=initialTraits(p);
   for(const [teamId,lineup] of Object.entries(season.rosterIds)){
     if(!season.squadIds[teamId]){
       season.squadIds[teamId]=[...lineup];
@@ -126,6 +130,8 @@ export function recordLifeMatch(season,result,rounds){
   season.lifeSettlements??=[];
   if(season.lifeSettlements.includes(result.matchId))return;
   season.lifeSettlements.push(result.matchId);
+  recordRecovery(season,result);
+  recordChemistry(season,result);
   const own=[result.home,result.away].includes(season.teamId);
   if(own){
     for(const r of season.playerRequests??[]){

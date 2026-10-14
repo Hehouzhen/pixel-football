@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import {careerTimeline,careerSeasonSummary,selectSignature,signatureMatch} from './career-story.mjs';
 import {createCareerPlayer,finishCareerMatch,toggleMatchMemory} from './career.mjs';
+import {careerGoalProgress,chooseCareerGoal,settleCareerGoal} from './career-goals.mjs';
 import {Match} from './engine.mjs';
 import {createSeason,LEAGUES} from './league.mjs';
 import {makeCareerSlot,exportBackup,importBackup} from './save-slots.mjs';
@@ -19,4 +20,6 @@ const first=careerSeasonSummary(p,1),second=careerSeasonSummary(p,2);assert.equa
 const partial={...p,memories:[],history:p.history.filter(r=>r.season===2)};assert.equal(careerSeasonSummary(partial,1).contributions[0][1],null);assert(!careerTimeline(partial).some(r=>r.labels.includes('首次进球')),'never invent a first goal from truncated history');
 const older={...p,history:p.history.map(({matchId,...r})=>r),seasonLedger:{1:{appearances:0,goals:0,ratingTotal:0}}};assert.equal(careerSeasonSummary(older,1).goals,1);assert.equal(careerTimeline(older).find(r=>r.matchId===1).labels.includes('首秀'),true);
 const defender=finishCareerMatch(createCareerPlayer('后防',4,'defender'),{tackles:3,interceptions:2,blocks:1},[0,0],180);assert(careerTimeline(defender)[0].labels.includes('防守代表作 · 6+有效防守'));
+let goalPlayer=chooseCareerGoal(createCareerPlayer('目标球员',9,'forward'),1,'goal-contributions');goalPlayer=finishCareerMatch(goalPlayer,{goals:2,assists:1},[3,1],180,{season:1});assert.equal(careerGoalProgress(goalPlayer,1).value,3);assert.equal(careerGoalProgress(goalPlayer,1).complete,false);for(let i=0;i<12;i++)goalPlayer=finishCareerMatch(goalPlayer,{goals:1},[1,0],180,{season:1});goalPlayer=settleCareerGoal(goalPlayer,1);assert.equal(goalPlayer.goalHistory[0].value,15);assert.equal(goalPlayer.goalHistory[0].complete,true);assert(goalPlayer.honors.some(item=>item==='1 赛季 · 持续制造威胁'));assert.equal(settleCareerGoal(goalPlayer,1).goalHistory.length,1,'season goals settle once');assert.equal(chooseCareerGoal(goalPlayer,1,'not-a-goal').seasonGoal.goalId,'goal-contributions','invalid choice cannot replace a saved goal');
+const goalBackup=exportBackup({active:0,slots:[makeCareerSlot(createSeason(league.id,league.teams[0].id),goalPlayer),null,null]});assert.deepEqual(importBackup(goalBackup).slots[0].player.goalHistory,goalPlayer.goalHistory,'goal results survive strict backup round-trip');
 console.log('Career timeline, signature persistence, season coverage and old-save checks passed.');

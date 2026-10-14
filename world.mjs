@@ -1,9 +1,11 @@
+import {positionRating,ABILITIES} from './ratings.mjs';
 import {advanceContracts,ensureFootballLife,squadPlayers,wageBudget} from './football-life.mjs';
 import {generateProspect} from './identity.mjs';
 import {LEAGUES,getTeam,prepareSeason,retireAgedPlayers} from './league.mjs';
 import {activePlayers,rosterRating,teamName} from './identity.mjs';
 import {advanceSeasonAges} from './aging.mjs';
 import {value,wage} from './transfers.mjs';
+import {advanceAcademySeason} from './academy.mjs';
 
 const hash=text=>{let n=2166136261;for(const char of String(text)){n^=char.charCodeAt(0);n=Math.imul(n,16777619)}return n>>>0};
 const seasonNumber=season=>(season.history?.length??0)+1;
@@ -58,10 +60,32 @@ function marketDeal(season,league,year,managedTeamId,protectedPlayerId){
 
 const initialFunds=teamId=>+(16+(getTeam(teamId)?.strength??1)*18).toFixed(1);
 
+function academyIntake(season,year){
+  const intake=[];
+  for(const team of LEAGUES.flatMap(league=>league.teams)){
+    const squad=squadPlayers(season,team.id);if(squad.length>=12)continue;
+    const position=Array.from({length:6},(_,i)=>({i,count:squad.filter(p=>p.position===i).length,age:squad.filter(p=>p.position===i).reduce((max,p)=>Math.max(max,p.age),0)})).sort((a,b)=>a.count-b.count||b.age-a.age||a.i-b.i)[0].i;
+    const used=new Set(squad.map(p=>p.number)),number=Array.from({length:99},(_,i)=>i+1).find(n=>!used.has(n)),player=generateProspect(season.playerData,team.id,position,year,number);
+    player.age=17+hash(`${player.id}:intake-age`)%3;
+    for(const key of ABILITIES)player.attributes[key]=Math.max(1,player.attributes[key]-8-hash(`${player.id}:${key}:academy`)%5);
+    player.attributes.goalkeeping=Math.round(['reflexes','handling','keeperPositioning','oneOnOne'].reduce((sum,k)=>sum+player.attributes[k],0)/4);
+    season.playerData[player.id]=player;season.squadIds[team.id].push(player.id);
+    intake.push({id:player.id,name:player.name,teamId:team.id,age:player.age,position,year});
+  }
+  return intake;
+}
+function selectWorldLineups(season,managedTeamId){
+  for(const team of LEAGUES.flatMap(league=>league.teams)){
+    if(team.id===managedTeamId)continue;
+    const squad=squadPlayers(season,team.id);
+    for(let index=0;index<6;index++){const candidate=squad.filter(p=>p.position===index).sort((a,b)=>positionRating(b)-positionRating(a)||a.id.localeCompare(b.id))[0];if(candidate){season.rosterIds[team.id][index]=candidate.id;season.names[`${team.id}:${index}`]=candidate.name}}
+  }
+}
+
 export function advancePlayerWorld(season,{managedTeamId=season.teamId,career=null}={}){
-  prepareSeason(season,career);
   const year=season.calendar?.startYear??2026+(season.history?.length??0);
   if(season.worldOffseason?.year===year)return season.worldOffseason;
+  prepareSeason(season,career);
   season.worldFunds??=Object.fromEntries(LEAGUES.flatMap(league=>league.teams.map(team=>[team.id,initialFunds(team.id)])));
   const market=ensureWorldMarket(season),before=new Map(Object.values(season.playerData).map(player=>[player.id,{age:player.age,attributes:{...player.attributes}}]));
   advanceSeasonAges(season,career);
@@ -74,6 +98,10 @@ export function advancePlayerWorld(season,{managedTeamId=season.teamId,career=nu
     market.lastYear=year;market.nextYear=year+2+hash(`${season.seed??0}:${year}:next-market`) % 3;
   }
   ensureFootballLife(season,generateProspect);
+  const youthIntake=year>2026?academyIntake(season,year):[];
+  const academyIntakeForClub=career?[]:advanceAcademySeason(season,managedTeamId,year);
+  ensureFootballLife(season,generateProspect);
+  selectWorldLineups(season,managedTeamId);
   const development={improved:0,declined:0,aged:0};
   for(const player of Object.values(season.playerData)){
     const old=before.get(player.id);if(!old||player.retired)continue;
@@ -82,7 +110,7 @@ export function advancePlayerWorld(season,{managedTeamId=season.teamId,career=nu
     if(attrs.some(key=>player.attributes[key]>old.attributes[key]))development.improved++;
     if(attrs.some(key=>player.attributes[key]<old.attributes[key]))development.declined++;
   }
-  const summary={year,season:seasonNumber(season),marketOpened:opened,nextMarketYear:market.nextYear,retirements:structuredClone(retirements),transfers,development};
+  const summary={year,season:seasonNumber(season),marketOpened:opened,nextMarketYear:market.nextYear,retirements:structuredClone(retirements),transfers,development,youthIntake,academyIntake:academyIntakeForClub};
   season.worldOffseason=summary;
   return summary;
 }

@@ -1,16 +1,17 @@
 import {playerRows} from './league.mjs';
+import {ADVANCED_STAT_FIELDS} from './simulation.mjs';
 
 export const STAT_GROUPS=[
-  {id:'attack',label:'进攻',fields:[['goals','进球'],['assists','助攻'],['shots','射门'],['shotsOnTarget','射正'],['headerGoals','头球进球'],['bicycleGoals','倒钩进球']]},
-  {id:'creation',label:'组织',fields:[['passes','传球尝试'],['passesCompleted','成功传球'],['keyPasses','关键传球'],['forwardPasses','向前传球'],['crosses','传中尝试'],['crossesCompleted','成功传中']]},
-  {id:'defense',label:'防守',fields:[['tackleAttempts','抢断尝试'],['tackles','抢断'],['interceptions','拦截'],['blocks','封堵'],['turnovers','丢失球权']]},
+  {id:'attack',label:'进攻',fields:[['goals','进球'],['assists','助攻'],['shots','射门'],['shotsOnTarget','射正'],['headerGoals','头球进球'],['bicycleGoals','倒钩进球'],['xG','预期进球']]},
+  {id:'creation',label:'组织',fields:[['passes','传球尝试'],['passesCompleted','成功传球'],['keyPasses','关键传球'],['forwardPasses','向前传球'],['crosses','传中尝试'],['crossesCompleted','成功传中'],['xA','预期助攻'],['dribblesCompleted','成功突破']]},
+  {id:'defense',label:'防守',fields:[['tackleAttempts','抢断尝试'],['tackles','抢断'],['interceptions','拦截'],['blocks','封堵'],['turnovers','丢失球权'],['aerialWon','争顶成功']]},
   {id:'efficiency',label:'效率',fields:[['shotAccuracy','射正率'],['shotConversion','射门转化率'],['passAccuracy','传球成功率'],['crossAccuracy','传中成功率'],['tackleSuccess','抢断成功率']]},
-  {id:'keeper',label:'门将',fields:[['saves','扑救']]},
+  {id:'keeper',label:'门将',fields:[['saves','扑救'],['keeperSpills','扑救脱手'],['goalsConceded','在场失球']]},
   {id:'discipline',label:'纪律',fields:[['fouls','犯规'],['yellows','黄牌'],['reds','红牌']]},
 ];
 
 export const TEAM_STAT_GROUPS=[
-  {id:'attack',label:'进攻',fields:[['goalsFor','进球'],['shots','射门'],['onTarget','射正']]},
+  {id:'attack',label:'进攻',fields:[['goalsFor','进球'],['shots','射门'],['onTarget','射正'],['xG','预期进球']]},
   {id:'creation',label:'组织',fields:[['passes','传球尝试'],['passesCompleted','成功传球'],['crosses','传中']]},
   {id:'defense',label:'防守',fields:[['tackles','抢断'],['fouls','犯规']]},
   {id:'keeper',label:'门将',fields:[['saves','扑救']]},
@@ -23,7 +24,10 @@ export const RATE_DENOMINATORS=Object.fromEntries(Object.entries(RATE_STATS).map
 
 export function combinePlayerRows(...states){
   const combined=new Map();
-  for(const state of states.filter(Boolean))for(const row of playerRows(state)){
+  for(const state of states.filter(Boolean)){
+    const recorded=new Map();for(const match of state.results??[])for(const player of match.playerStats??[])if(typeof player.xG==='number'&&player.playingSeconds>0)recorded.set(player.playerId,(recorded.get(player.playerId)??0)+1);
+    for(const row of playerRows(state)){
+    row.eventAppearances=recorded.get(row.id)??0;
     const current=combined.get(row.id);
     if(!current){combined.set(row.id,{...row,attributes:state.playerData?.[row.id]?.attributes,careerStats:state.playerData?.[row.id]?.careerStats,bestPerformance:state.playerData?.[row.id]?.bestPerformance});continue}
     for(const [field,value] of Object.entries(row)){
@@ -33,6 +37,7 @@ export function combinePlayerRows(...states){
     current.attributes=state.playerData?.[row.id]?.attributes??current.attributes;
     current.careerStats=state.playerData?.[row.id]?.careerStats??current.careerStats;
     current.bestPerformance=state.playerData?.[row.id]?.bestPerformance??current.bestPerformance;
+    }
   }
   return [...combined.values()];
 }
@@ -41,7 +46,7 @@ export function playerStatValue(player,field,format='total'){
   if(RATE_STATS[field]){const [numerator,denominator]=RATE_STATS[field];return player[denominator]>0&&typeof player[numerator]==='number'?player[numerator]/player[denominator]:null}
   const raw=player[field];
   if(typeof raw!=='number')return null;
-  if(format==='perAppearance')return player.appearances>0?raw/player.appearances:null;
+  if(format==='perAppearance'){const appearances=ADVANCED_STAT_FIELDS.includes(field)?player.eventAppearances:player.appearances;return appearances>0?raw/appearances:null}
   return raw;
 }
 

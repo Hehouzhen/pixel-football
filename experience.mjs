@@ -4,7 +4,7 @@ export const STYLES={
   defender:[{id:'stopper',name:'拦截后卫',description:'抢断范围更大，传球球速略低'},{id:'ballplayer',name:'出球后卫',description:'传球更稳定，抢断范围略小'}]
 };
 export const styleName=id=>Object.values(STYLES).flat().find(s=>s.id===id)?.name??'均衡';
-export const HAIRSTYLES=['短发','侧分','卷发','长发','寸头','光头'];
+export {HAIRSTYLES} from './appearance.mjs';
 export const SHOES=['#eef3dc','#e9c64a','#ef806a','#7ebfff','#b08ce0','#252d3a'];
 export const CELEBRATIONS=['冲刺挥拳','滑跪','Siu 式旋跳'];
 export const rate=(n,d)=>d?`${Math.round(n/d*100)}%`:'—';

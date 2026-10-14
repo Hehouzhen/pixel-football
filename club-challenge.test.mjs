@@ -1,0 +1,24 @@
+import assert from 'node:assert/strict';
+import {createClubChallenge,settleClubChallenge,challengeProgress} from './club-challenge.mjs';
+import {LEAGUES,createSeason,fixtures,seasonRounds} from './league.mjs';
+import {startCup} from './cup.mjs';
+import {importBackup,exportBackup,makeClubSlot} from './save-slots.mjs';
+import {worldHistory} from './world-history.mjs';
+
+const league=LEAGUES[0],season=createSeason(league.id,league.teams[0].id,551),team=season.teamId;
+const youthId=Object.keys(season.playerData)[0],youth=season.playerData[youthId];youth.academy=true;season.academy={teamId:team,level:1,focus:'balanced',prospects:[],graduates:[]};
+season.challenge=createClubChallenge(season,{targetPosition:16,requiredPromotions:1});
+assert.equal(challengeProgress(season).promotions,0);
+season.academy.graduates=[{id:youthId,name:youth.name,year:2026,age:youth.age,position:youth.position}];
+assert.equal(settleClubChallenge(season).completed,true);
+assert.equal(settleClubChallenge(season).promotions,1,'settling the same season twice must not duplicate progress');
+assert.equal(season.challenge.results.length,1);
+assert.throws(()=>createClubChallenge(season,{targetPosition:17}),/目标无效/);
+const backup=importBackup(exportBackup({version:2,active:0,slots:[makeClubSlot(season),null,null]}));
+assert.equal(backup.slots[0].season.challenge.targetPosition,16);
+const invalid=structuredClone(season);invalid.challenge.targetPosition=18;
+assert.throws(()=>importBackup(exportBackup({version:2,active:0,slots:[makeClubSlot(invalid),null,null]})),/球队或比赛设置无效/);
+startCup(season);assert.equal(season.cup.teams.length,20);
+assert.equal(seasonRounds(season),30);assert.equal(fixtures(league).length,30);
+assert.equal(worldHistory([]).length,LEAGUES.length);
+console.log('Club challenge tests passed');

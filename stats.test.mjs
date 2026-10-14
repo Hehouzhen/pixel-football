@@ -13,6 +13,8 @@ assert.equal(playerStatValue(rows[0],'passAccuracy'),9/12);
 assert.equal(playerStatValue({passes:0,passesCompleted:0},'passAccuracy'),null);
 assert.equal(playerStatValue({passes:4},'passAccuracy'),null);
 assert.equal(playerStatValue({appearances:0,goals:0},'goals','perAppearance'),null);
+assert.equal(playerStatValue({appearances:10,eventAppearances:2,xG:1},'xG','perAppearance'),.5,'advanced averages use only matches that recorded those metrics');
+assert.equal(playerStatValue({appearances:10,xG:1},'xG','perAppearance'),null,'missing metric coverage must not be invented');
 assert.equal(queryPlayers(rows,{teamId:'club-a',position:'forward',minAppearances:2,search:'ar',metric:'goals'})[0].id,'a');
 assert.equal(queryPlayers(rows,{position:'defender'}).length,1);
 assert.equal(queryPlayers(rows,{search:'no match'}).length,0);

@@ -27,7 +27,7 @@ assert.deepEqual(leagueResult.weather,predicted.weather,'simulated league fixtur
 assert.equal(leagueResult.playerStats.filter(p=>p.teamId===leagueResult.home).reduce((n,p)=>n+(p.goals??0),0),leagueResult.score[0]);
 assert.equal(leagueResult.playerStats.filter(p=>p.teamId===leagueResult.away).reduce((n,p)=>n+(p.goals??0),0),leagueResult.score[1]);
 
-while(season.week<seasonRounds(season))simulateWeek(season);season.teamId=standings(season)[0].id;startCup(season);const pair=cupNextMatch(season),cupWeather=simulateFixture(season,...pair,30+season.cup.round,'cup').weather;
+while(season.week<seasonRounds(season))simulateWeek(season);season.teamId='arsenal';startCup(season);const pair=cupNextMatch(season),cupWeather=simulateFixture(season,...pair,30+season.cup.round,'cup').weather;
 completeCupMatch(season,[0,0],Array.from({length:12},()=>({})),null,null,null,{source:'played',weather:cupWeather});
 assert.deepEqual(season.cup.results.find(result=>result.home===pair[0]&&result.away===pair[1]).weather,cupWeather,'played cup fixture stores its weather');
 const backup={version:2,active:0,slots:[makeClubSlot(season),null,null]};

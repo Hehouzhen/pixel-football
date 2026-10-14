@@ -27,7 +27,7 @@ for(const position of ['forward','midfielder','defender']){
 assert(playerRating({keyPasses:3},[0,0],'midfielder')>playerRating({keyPasses:3},[0,0],'defender'));
 const veteran={...neutral,level:10,xp:950,attributes:{shooting:88,passing:70,defense:62}},later=finishCareerMatch(veteran,{},[0,0],180);
 assert.equal(later.level,10);assert.deepEqual(later.attributes,{...veteran.attributes,shielding:66});assert.equal(later.trainingPoints,0);assert.equal(levelProgress(later).target,175);assert.equal(later.progressXp,65);
-const close={...neutral,xp:99},leveled=finishCareerMatch(close,{goals:1},[1,0],180);assert.equal(leveled.level,2);assert.equal(leveled.attributes.shooting,70);assert.equal(leveled.trainingPoints,2);
+const close={...neutral,xp:99},leveled=finishCareerMatch(close,{goals:1},[1,0],180);assert.equal(leveled.level,2);assert.equal(leveled.attributes.shooting,70);assert.equal(leveled.trainingPoints,0);
 
 const report=new Match({careerIndex:5,careerNumber:29}).report();
 let player=finishCareerMatch(neutral,{passesCompleted:1},[0,0],180,{report,opponent:'Aston Villa'});

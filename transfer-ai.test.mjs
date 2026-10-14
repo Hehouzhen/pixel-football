@@ -9,7 +9,7 @@ assert(target,'应当能找到符合预算的引援目标');
 const report=inquiry(season,target.id);
 assert.equal(report.playerId,target.id);assert(report.askingFee>0);assert(report.wageExpectation>0);assert(['较高','观望','偏低'].includes(report.interest));
 
-let negotiation=startNegotiation(season,target.id,{outgoingId:target.outgoingId,fee:1,salary:report.wageExpectation});
+let negotiation=startNegotiation(season,target.id,{outgoingId:target.outgoingId,fee:+(report.askingFee*.9).toFixed(1),salary:report.wageExpectation});
 assert.equal(negotiation.talk.status,'club-counter','低报价应得到卖方还价');
 season=negotiation.season;
 const resumed=importBackup(exportBackup({version:2,active:0,slots:[makeClubSlot(season),null,null]})).slots[0].season;

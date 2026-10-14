@@ -1,8 +1,9 @@
 import {advanceClubRole,roleProgress} from './career-role.mjs';
 import {objectiveFor,milestones,STYLES} from './experience.mjs';
 import {LEAGUES} from './clubs.mjs';
+import {ensureRatings,positionRating} from './ratings.mjs';
 const POSITION={forward:{label:'前锋',index:5,primary:'shooting',attributes:{shooting:70,passing:58,defense:50,shielding:66,speed:74,firstTouch:70,endurance:67,aerial:72}},midfielder:{label:'中场',index:3,primary:'passing',attributes:{shooting:58,passing:70,defense:56,shielding:64,speed:68,firstTouch:72,endurance:74,aerial:55}},defender:{label:'后卫',index:1,primary:'defense',attributes:{shooting:52,passing:58,defense:70,shielding:60,speed:63,firstTouch:59,endurance:70,aerial:75}}};
-const FIELDS=['goals','assists','shots','shotsOnTarget','passes','passesCompleted','crosses','tackles','touches','fouls','yellows','reds','distance','possession','headers','bicycles','forwardPasses','interceptions','tackleAttempts','playingSeconds','keyPasses','blocks','turnovers','crossesCompleted','carryDistance','headerGoals','bicycleGoals','penaltyGoals'];
+const FIELDS=['goals','assists','shots','shotsOnTarget','passes','passesCompleted','crosses','tackles','touches','fouls','yellows','reds','distance','possession','headers','bicycles','forwardPasses','interceptions','tackleAttempts','playingSeconds','keyPasses','blocks','turnovers','crossesCompleted','carryDistance','headerGoals','bicycleGoals','penaltyGoals','xG','xA','dribbles','dribblesCompleted','aerialDuels','aerialWon','keeperSpills'];
 const clamp=(value,min,max)=>Math.max(min,Math.min(max,value));
 
 export const POSITIONS=Object.entries(POSITION).map(([id,value])=>({id,label:value.label}));
@@ -13,7 +14,7 @@ export function createCareerPlayer(name,number,position,appearance={skin:'#ebbd8
   if(!config)throw new Error('Unknown position');
   const clean=String(name).trim().slice(0,10);
   if(!clean)throw new Error('Player name is required');
-  return {style:STYLES[position].some(s=>s.id===style)?style:null,bio:'',history:[],transferHistory:[],honors:[],name:clean,number:clamp(Math.round(Number(number)||10),2,99),position,index:config.index,appearance,age:18,potential:86,trainingPoints:0,level:1,xp:0,attributes:{...config.attributes},stats:{appearances:0,wins:0,draws:0,losses:0,ratingTotal:0,...Object.fromEntries(FIELDS.map(field=>[field,0]))},lastMatch:null};
+  return {style:STYLES[position].some(s=>s.id===style)?style:null,bio:'',history:[],transferHistory:[],honors:[],name:clean,number:clamp(Math.round(Number(number)||10),2,99),position,index:config.index,appearance,age:18,potential:86,trainingFocus:'balanced',developmentHistory:[],trainingPoints:0,level:1,xp:0,attributes:ensureRatings({...config.attributes}),stats:{appearances:0,wins:0,draws:0,losses:0,ratingTotal:0,...Object.fromEntries(FIELDS.map(field=>[field,0]))},lastMatch:null};
 }
 
 export const careerObjective=(position,round=0,duration=180)=>objectiveFor(position,round,duration);
@@ -25,8 +26,7 @@ export function ratingBreakdown(stat={},score=[0,0],position='forward'){
 export const playerRating=(stat,score,position)=>ratingBreakdown(stat,score,position).rating;
 export function levelProgress(player){const target=Math.min(300,100+Math.max(0,player.level-5)*15),value=player.progressXp??player.xp%100;return {value,target,remaining:target-value,percent:value/target*100}}
 
-const POSITION_WEIGHTS={forward:{shooting:.28,speed:.18,firstTouch:.16,shielding:.12,passing:.1,endurance:.08,aerial:.06,defense:.02},midfielder:{passing:.25,firstTouch:.18,endurance:.16,speed:.12,shielding:.1,shooting:.08,defense:.07,aerial:.04},defender:{defense:.25,aerial:.17,speed:.12,endurance:.12,passing:.1,shielding:.09,firstTouch:.08,shooting:.07}};
-const roleRating=(attributes,position)=>Object.entries(POSITION_WEIGHTS[position]??POSITION_WEIGHTS.forward).reduce((sum,[key,weight])=>sum+(attributes?.[key]??60)*weight,0);
+const roleRating=(attributes,position)=>positionRating({attributes,position:POSITION[position]?.index??5});
 const scheduleHash=text=>{let value=2166136261;for(const char of String(text)){value^=char.charCodeAt(0);value=Math.imul(value,16777619)}return value>>>0};
 export function careerTransferWindow(career,season){
   const currentSeason=(season?.history?.length??0)+1,seed=career?.id??`${career?.name??'player'}:${career?.position??''}:${career?.number??0}`;
@@ -60,10 +60,11 @@ export function memoryOf(row,reasons=['我的收藏']){const report=row.report?s
 export function toggleMatchMemory(player,matchId){const next=structuredClone(player),saved=next.memories??[];next.history=(next.history??[]).map((r,i)=>({...r,matchId:r.matchId??Math.max(1,next.stats.appearances-next.history.length+i+1)}));const row=next.history.find(r=>r.matchId===matchId),memory=saved.find(r=>r.matchId===matchId);if(memory){if(row&&!row.report)row.report=memory.report;next.memories=saved.filter(r=>r.matchId!==matchId);if(next.signatureMatchId===matchId)delete next.signatureMatchId;return next}if(!row?.report||saved.length>=30)return next;next.memories=[...saved,memoryOf(row)];return next}
 
 export function finishCareerMatch(player,stat,score,duration,context={}){
+  if(context.source==='simulated'&&stat?.playingSeconds===0)return structuredClone(player);
   const next=structuredClone(player);next.attributes.shielding??=POSITION[next.position].attributes.shielding;const match={};for(const field of FIELDS)match[field]=stat?.[field]??0;
   const rating=playerRating(match,score,next.position),objective=context.objective??careerObjective(next.position),objectiveComplete=match[objective.field]>=objective.target,engaged=['goals','assists','shotsOnTarget','passesCompleted','tackles','interceptions','blocks','keyPasses','carryDistance'].some(k=>match[k]>0),baseXp=15+(engaged?Math.max(0,Math.round((rating-5)*10)):0)+match.goals*12+match.assists*8+(objectiveComplete?10:0),xpGain=context.source==='simulated'?Math.round(baseXp*.7):baseXp;
-  next.progressXp=levelProgress(next).value+xpGain;next.xp+=xpGain;const oldLevel=next.level;while(next.progressXp>=levelProgress(next).target){next.progressXp-=levelProgress(next).target;next.level++}const levels=next.level-oldLevel;
-  next.trainingPoints=(next.trainingPoints??0)+levels*2;
+  next.progressXp=levelProgress(next).value+xpGain;next.xp+=xpGain;while(next.progressXp>=levelProgress(next).target){next.progressXp-=levelProgress(next).target;next.level++}
+  // Match XP records experience; permanent ability changes settle once each offseason.
   next.stats.appearances++;next.stats[score[0]>score[1]?'wins':score[0]<score[1]?'losses':'draws']++;next.stats.ratingTotal+=rating;for(const field of FIELDS)next.stats[field]=(next.stats[field]??0)+match[field];
   next.lastMatch={...match,rating:+rating.toFixed(1),xpGain,score:[...score],minutes:Math.min(90,Math.round((match.playingSeconds||duration)/duration*90)),objective:{...objective,complete:objectiveComplete},...(context.source?{source:context.source}:{}),...(context.goalEvents?{goalEvents:structuredClone(context.goalEvents)}:{}),growth:Object.fromEntries(Object.keys(next.attributes).map(k=>[k,next.attributes[k]-(player.attributes?.[k]??next.attributes[k])]))};
   if(context.seasonState){next.lastMatch.roleBefore=roleProgress(player,context.seasonState).tier;next.clubProgress=advanceClubRole(player,next.lastMatch,context);next.lastMatch.roleAfter=roleProgress(next,context.seasonState).tier}

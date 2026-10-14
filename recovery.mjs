@@ -1,0 +1,19 @@
+import {getTeam} from './clubs.mjs';
+import {skillValue,positionRating} from './ratings.mjs';
+import {fixtureDate,daysBetween,fixtureKey} from './schedule.mjs';
+const clamp=(v,a=0,b=100)=>Math.max(a,Math.min(b,v));
+const group=i=>i===0?0:i<=2?1:i<=4?3:5;
+export function recoveryAt(player,date){const saved=player.recovery;if(!saved)return {fatigue:0,readiness:1,restDays:null};if(saved.date>date)return {fatigue:0,readiness:1,restDays:null};const restDays=daysBetween(saved.date,date),rate=8+skillValue(player.attributes,'endurance')*.05,fatigue=clamp(saved.fatigue-restDays*rate);return {fatigue,readiness:Math.max(.82,1-fatigue*.002),restDays}}
+export function recordRecovery(season,result){const date=result.date??fixtureDate(season,result.competition,result.competition==='cup'?result.round:result.week,result.phase);result.date=date;
+ for(const row of result.playerStats??[]){const p=season.playerData?.[row.playerId];if(!p||p.recovery?.matchId===result.matchId||!(row.playingSeconds>0))continue;const fraction=clamp(row.minutesPlayed!==undefined?row.minutesPlayed/90:row.playingSeconds/(result.duration??180),0,1),before=recoveryAt(p,date),intensity=Math.min(8,(row.distance??0)/(result.duration??180)*.5),style=p.teamId===season.teamId?season.tactic:getTeam(p.teamId)?.style,load=((44+(style==='press'?6:0))*fraction+intensity)*(p.position===0?.55:1)*(1-(skillValue(p.attributes,'endurance')-60)*.004);p.recovery={date,fatigue:clamp(before.fatigue+load),matchId:result.matchId};row.startReadiness=before.readiness;row.endFatigue=p.recovery.fatigue}
+ season.calendar={...(season.calendar??{}),currentDate:!season.calendar?.currentDate||date>season.calendar.currentDate?date:season.calendar.currentDate};
+}
+export function fitLineup(season,teamId,date,{protectedId=null}={}){const used=new Set(),squad=[...new Set([...(season.squadIds?.[teamId]??[]),...(season.rosterIds?.[teamId]??[])])].map(id=>season.playerData[id]).filter(p=>p&&!p.retired&&!p.freeAgent&&p.teamId===teamId);
+ return Array.from({length:6},(_,slot)=>{const protectedPlayer=protectedId&&season.rosterIds[teamId][slot]===protectedId?squad.find(p=>p.id===protectedId):null,candidate=protectedPlayer??squad.filter(p=>!used.has(p.id)&&group(p.position)===group(slot)).sort((a,b)=>{const score=p=>positionRating(p,slot)-recoveryAt(p,date).fatigue*.24;return score(b)-score(a)||a.id.localeCompare(b.id)})[0];const id=candidate?.id??season.rosterIds[teamId][slot];used.add(id);return id})
+}
+export function prepareFixtureTeams(season,event,{autoOwn=false,protectedId=null}={}){const date=event.date??fixtureDate(season,event.competition,event.round,season.cup?.phase),key=fixtureKey({...event,date});
+ for(const teamId of event.pair){const plan=teamId===season.teamId?season.rotationPlans?.[key]:null;let lineup=plan;if(lineup&&!(lineup.length===6&&new Set(lineup).size===6&&lineup.every((id,i)=>{const p=season.playerData[id];return p&&!p.retired&&!p.freeAgent&&p.teamId===teamId&&group(p.position)===group(i)})))lineup=null;if(!lineup&&teamId!==season.teamId||!lineup&&autoOwn)lineup=fitLineup(season,teamId,date,{protectedId:teamId===season.teamId?protectedId:null});
+ if(lineup&&lineup.length===6&&new Set(lineup).size===6&&lineup.every((id,i)=>{const p=season.playerData[id];return p&&!p.retired&&!p.freeAgent&&p.teamId===teamId&&(season.squadIds?.[teamId]??season.rosterIds[teamId]).includes(id)&&group(p.position)===group(i)})){season.rosterIds[teamId]=[...lineup];for(let i=0;i<6;i++)delete season.names?.[`${teamId}:${i}`]}}
+ if(protectedId){const p=season.playerData[protectedId];if(p&&p.teamId===season.teamId&&!p.retired&&!p.freeAgent&&!season.rosterIds[season.teamId].includes(protectedId)){season.rosterIds[season.teamId][p.position]=protectedId;delete season.names?.[`${season.teamId}:${p.position}`]}}
+ return season;
+}

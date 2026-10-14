@@ -1,3 +1,4 @@
+import {fixtureDate} from './schedule.mjs';
 import {cupNextMatch} from './cup.mjs';
 import {currentFixture,seasonRounds} from './league.mjs';
 
@@ -24,7 +25,7 @@ function completedCupDates(cup){
   return 9;
 }
 
-export function nextCalendarFixture(season){
+function nextFixture(season){
   if(!season)return null;
   const rounds=seasonRounds(season),cup=season.cup;
   if(season.formatVersion!==2){
@@ -42,3 +43,5 @@ export function nextCalendarFixture(season){
   if(nextCup)return {competition:'cup',pair:nextCup,round:cup.round,event:season.week+cupDay,label:'欧洲冠军杯决赛'};
   return null;
 }
+
+export function nextCalendarFixture(season){const event=nextFixture(season);return event?{...event,date:fixtureDate(season,event.competition,event.round,season.cup?.phase)}:null}

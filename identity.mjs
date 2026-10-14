@@ -1,6 +1,7 @@
 import {ensureFootballLife} from './football-life.mjs';
 import {LEAGUES,getTeam} from './clubs.mjs';
 import {playerAgeProfile,seasonStartYear} from './aging.mjs';
+import {ensureRatings,positionRating} from './ratings.mjs';
 
 export function teamName(season,id){return season?.teamNames?.[id]??getTeam(id)?.name??id}
 
@@ -12,7 +13,7 @@ export function initialAttributes(teamId,index){
   const strength=getTeam(teamId)?.strength??1;
   const base=60+Math.round((strength-1)*25);
   const variation=((index*7+teamId.length*3)%9)-4;
-  return {shooting:clamp(base+(index===5?12:index>=3?5:index===0?-22:-10)+variation),passing:clamp(base+(index===3||index===4?9:index===0?-5:0)-variation),defense:clamp(base+(index===0?3:index<=2?12:index===5?-12:0)+variation),shielding:clamp(base+(index===0?-12:index<=2?7:index===5?8:index>=3?3:0)+variation),goalkeeping:clamp(base+(index===0?18:-28)+variation),speed:clamp(base+(index===0?-18:index===5?10:3)-variation),firstTouch:clamp(base+(index===0?-14:index>=3?7:index===5?4:0)+variation),endurance:clamp(base+(index===0?-8:index>=3?5:2)-variation),aerial:clamp(base+(index===0?7:index<=2?12:index===5?8:-5)+variation)};
+  return ensureRatings({shooting:clamp(base+(index===5?12:index>=3?5:index===0?-22:-10)+variation),passing:clamp(base+(index===3||index===4?9:index===0?-5:0)-variation),defense:clamp(base+(index===0?3:index<=2?12:index===5?-12:0)+variation),shielding:clamp(base+(index===0?-12:index<=2?7:index===5?8:index>=3?3:0)+variation),goalkeeping:clamp(base+(index===0?18:-28)+variation),speed:clamp(base+(index===0?-18:index===5?10:3)-variation),firstTouch:clamp(base+(index===0?-14:index>=3?7:index===5?4:0)+variation),endurance:clamp(base+(index===0?-8:index>=3?5:2)-variation),aerial:clamp(base+(index===0?7:index<=2?12:index===5?8:-5)+variation)});
 }
 
 export function createIdentity(nameFor){
@@ -85,6 +86,7 @@ export function ensureIdentity(season,nameFor,career=null){
     p.attributes.firstTouch??=initialAttributes(p.teamId,p.position).firstTouch;
     p.attributes.endurance??=initialAttributes(p.teamId,p.position).endurance;
     p.attributes.aerial??=initialAttributes(p.teamId,p.position).aerial;
+    ensureRatings(p.attributes);
     const ageProfile=playerAgeProfile(p.id,p.position,p.attributes);
     p.age??=ageProfile.age;p.potential??=ageProfile.potential;p.lastAgedStartYear??=season.calendar.startYear;
     p.retired??=false;p.honors??=[];p.awardHistory??=[];
@@ -99,10 +101,10 @@ export function ensureIdentity(season,nameFor,career=null){
       }
     }
   }
-  if(career){const defaults=initialAttributes(season.teamId,career.index);for(const key of ['speed','shielding','firstTouch','endurance','aerial'])career.attributes[key]??=defaults[key];career.age??=18;career.potential??=86;career.trainingPoints??=0}
+  if(career){const defaults=initialAttributes(season.teamId,career.index);for(const key of ['speed','shielding','firstTouch','endurance','aerial'])career.attributes[key]??=defaults[key];ensureRatings(career.attributes);career.age??=18;career.potential??=86;career.trainingPoints??=0}
   if(career){
     const id=career.id??season.rosterIds[season.teamId]?.[career.index];
-    if(id){career.id=id;season.playerData[id].name=career.name;season.playerData[id].number=career.number;season.playerData[id].age=career.age;season.playerData[id].potential=career.potential;season.playerData[id].attributes={...season.playerData[id].attributes,...career.attributes};season.playerData[id].honors=[...new Set([...(season.playerData[id].honors??[]),...(career.honors??[])])].slice(-200);career.attributes={...season.playerData[id].attributes}}
+    if(id){career.id=id;season.playerData[id].name=career.name;season.playerData[id].number=career.number;season.playerData[id].appearance=structuredClone(career.appearance??{});season.playerData[id].trainingFocus=career.trainingFocus??'balanced';season.playerData[id].age=career.age;season.playerData[id].potential=career.potential;season.playerData[id].attributes={...season.playerData[id].attributes,...career.attributes};season.playerData[id].honors=[...new Set([...(season.playerData[id].honors??[]),...(career.honors??[])])].slice(-200);career.attributes={...season.playerData[id].attributes}}
   }
   for(const ids of Object.values(season.rosterIds)){const used=new Set();for(const id of career&&ids.includes(career.id)?[career.id,...ids.filter(other=>other!==career.id)]:ids){const player=season.playerData[id];if(used.has(player.number))player.number=Array.from({length:99},(_,i)=>i+1).find(number=>!used.has(number)&&!ids.some(other=>other!==id&&season.playerData[other].number===number));used.add(player.number)}}
   ensureFootballLife(season,generateProspect);
@@ -113,6 +115,11 @@ export function activePlayers(season,teamId){return (season.rosterIds?.[teamId]?
 export function carryIdentity(oldSeason,newSeason,career=null){
   newSeason.rosterIds=structuredClone(oldSeason.rosterIds);
   newSeason.playerData=structuredClone(oldSeason.playerData);
+  newSeason.pairChemistry=Object.fromEntries(Object.entries(oldSeason.pairChemistry??{}).flatMap(([key,score])=>{
+    const [a,b]=key.split('|');return newSeason.playerData[a]?.teamId===newSeason.playerData[b]?.teamId&&score>54?[[key,score-4]]:[];
+  }));
+  newSeason.scoutingReports=structuredClone(oldSeason.scoutingReports??{});
+  newSeason.shortlist=[...(oldSeason.shortlist??[])];
   newSeason.squadIds=structuredClone(oldSeason.squadIds??{});
   newSeason.lifeEvents=structuredClone(oldSeason.lifeEvents??[]);
   newSeason.playerRequests=structuredClone(oldSeason.playerRequests??[]);
@@ -135,6 +142,8 @@ export function carryIdentity(oldSeason,newSeason,career=null){
     career.id??=newSeason.rosterIds[newSeason.teamId][career.index];
     newSeason.playerData[career.id].name=career.name;
     newSeason.playerData[career.id].number=career.number;
+    newSeason.playerData[career.id].appearance=structuredClone(career.appearance??{});
+    newSeason.playerData[career.id].trainingFocus=career.trainingFocus??'balanced';
     newSeason.playerData[career.id].age=career.age??newSeason.playerData[career.id].age;
     newSeason.playerData[career.id].potential=career.potential??newSeason.playerData[career.id].potential;
     newSeason.playerData[career.id].attributes={...newSeason.playerData[career.id].attributes,...career.attributes};
@@ -145,7 +154,7 @@ export function carryIdentity(oldSeason,newSeason,career=null){
 export function rosterRating(season,teamId){
   const players=activePlayers(season,teamId);
   if(!players.length)return getTeam(teamId).strength;
-  const quality=players.reduce((sum,p)=>sum+(p.position===0?p.attributes.goalkeeping:(p.attributes.shooting+p.attributes.passing+p.attributes.defense+p.attributes.speed+(p.attributes.shielding??60)+(p.attributes.firstTouch??60)+(p.attributes.endurance??60)+(p.attributes.aerial??60))/8),0)/players.length;
-  const baseline=Array.from({length:6},(_,i)=>initialAttributes(teamId,i)).reduce((sum,a,i)=>sum+(i===0?a.goalkeeping:(a.shooting+a.passing+a.defense+a.speed+a.shielding+a.firstTouch+a.endurance+a.aerial)/8),0)/6;
+  const quality=players.reduce((sum,p)=>sum+positionRating(p),0)/players.length;
+  const baseline=Array.from({length:6},(_,i)=>positionRating({position:i,attributes:initialAttributes(teamId,i)})).reduce((sum,value)=>sum+value,0)/6;
   return getTeam(teamId).strength+(quality-baseline)/100;
 }

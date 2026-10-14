@@ -13,9 +13,9 @@ function assertMatchGoals(match){
   assert.equal(typeof match.seasonId,'string','every new match should identify its season');
   assert.equal(typeof match.matchId,'string','every new match should have a stable ID');
   assert([120,180,300].includes(match.duration),'each match should preserve its duration');
-  assert.equal(new Set(match.playerStats.map(row=>row.playerId)).size,12,'each match should preserve twelve stable player identities');
+  assert.equal(new Set(match.playerStats.map(row=>row.playerId)).size,match.playerStats.length,'each participant needs a unique stable identity');assert(match.playerStats.length>=12&&match.playerStats.length<=18);
   assert.equal(match.lineups.length,2,'each match should save both lineups');
-  for(const lineup of match.lineups){const players=match.playerStats.filter(row=>row.teamId===lineup.teamId).sort((a,b)=>a.index-b.index);assert.deepEqual(lineup.playerIds,players.map(row=>row.playerId));assert.equal(players.length,6);for(const player of players){assert.equal(player.started,true);assert.equal(player.minuteOn,0);assert(player.minuteOff>=player.minuteOn&&player.minuteOff<=90);assert(player.minutesPlayed>=0&&player.minutesPlayed<=90);if(player.playingSeconds>0)assert.equal(player.minutesPlayed,Math.round(player.playingSeconds/match.duration*90));if(player.reds>0)assert(player.minuteOff<90,'a dismissed simulated player should have an exit minute')}}
+  for(const lineup of match.lineups){const players=match.playerStats.filter(row=>row.teamId===lineup.teamId),starters=players.filter(player=>player.started).sort((a,b)=>a.index-b.index);assert.deepEqual(lineup.playerIds,starters.map(row=>row.playerId));assert.equal(starters.length,6);for(const player of players){if(player.started)assert.equal(player.minuteOn,0);else assert(player.minuteOn>0);assert(player.minuteOff>=player.minuteOn&&player.minuteOff<=90);assert(player.minutesPlayed>=0&&player.minutesPlayed<=90);if(player.playingSeconds>0)assert.equal(player.minutesPlayed,Math.round(player.playingSeconds/match.duration*90));if(player.reds>0)assert(player.minuteOff<90,'a dismissed simulated player should have an exit minute')}}
 }
 
 function simulateCareerRound(season,career){
@@ -99,7 +99,9 @@ function fullSeason(){
   const loaded=loadSaveData(storage);
   assert.equal(loaded.active,0,'finished club save should reopen as active');
   assert.equal(loaded.slots[0].season.cup.phase,'complete','completed cup should survive a save round-trip');
-  assert.equal(loaded.slots[0].season.playerData[season.rosterIds[season.teamId][0]].awardHistory.length>0,true,'player honors should persist');
+  const winners=Object.values(season.playerData).filter(player=>player.awardHistory.length>0);
+  assert(winners.length>0,'both ceremonies should award player honors');
+  for(const winner of winners)assert.deepEqual(loaded.slots[0].season.playerData[winner.id].awardHistory,winner.awardHistory,'each actual award winner should retain every honor');
   const multiSlot=exportBackup({version:2,active:0,slots:[makeClubSlot(season),makeClubSlot(season),null]});
   assert(Buffer.byteLength(multiSlot)>8_000_000,'multi-slot backup should exceed the old size ceiling');
   assert.equal(importBackup(multiSlot).slots.filter(Boolean).length,2,'multi-slot season backup should remain restorable');

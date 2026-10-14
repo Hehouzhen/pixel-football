@@ -12,7 +12,7 @@ function stageLabel(result,knockout){if(result.phase==='league')return `${knocko
 
 export function EuropeanEntry({season,onOpen}){
   const cup=season.cup,pair=cupNextMatch(season),qualified=cup?.teams.includes(season.teamId),finished=season.week>=seasonRounds(season);
-  return <section className="panel club-panel european-entry" aria-label="欧冠入口"><div className="panel-label">EUROPEAN MATCH CENTRE</div><h2>欧冠比赛中心</h2><p className="club-copy">{!finished?'资格待定 · 联赛前四晋级，联赛结束后开启欧冠。':pair?`${stageLabel({phase:cup.phase,round:cup.round},cup.formatVersion===2)} · ${pair[0]===season.teamId?'主场':'客场'} · 对阵 ${teamName(season,pair.find(id=>id!==season.teamId))}`:!cup?'本赛季没有欧冠赛程。':!qualified?'本赛季未获得欧冠资格，可查看赛果与对阵。':cup.champion===season.teamId?'你是本赛季欧洲冠军！':`本队欧冠征程已结束 · 冠军：${teamName(season,cup.champion)}`}</p><button className={pair?'primary':'subtle'} onClick={onOpen}>{pair?'打开欧冠比赛中心 →':'查看欧冠赛程与对阵 →'}</button></section>;
+  return <section className="panel club-panel european-entry" aria-label="欧冠入口"><div className="panel-label">EUROPEAN MATCH CENTRE</div><h2>欧冠比赛中心</h2><p className="club-copy">{!finished?(cup?(qualified?'本赛季已获得欧冠资格 · 欧冠随联赛交错进行。':'本赛季未获得欧冠资格 · 赛事随赛季同步推进。'):'资格待定 · 联赛前四获得下一赛季欧冠资格。'):pair?`${stageLabel({phase:cup.phase,round:cup.round},cup.formatVersion===2)} · ${pair[0]===season.teamId?'主场':'客场'} · 对阵 ${teamName(season,pair.find(id=>id!==season.teamId))}`:!cup?'本赛季没有欧冠赛程。':!qualified?'本赛季未获得欧冠资格，可查看赛果与对阵。':cup.champion===season.teamId?'你是本赛季欧洲冠军！':`本队欧冠征程已结束 · 冠军：${teamName(season,cup.champion)}`}</p><button className={pair?'primary':'subtle'} onClick={onOpen}>{pair?'打开欧冠比赛中心 →':'查看欧冠赛程与对阵 →'}</button></section>;
 }
 
 export function EuropePage({season,onPlay,onSimulate,onBack,locked=false}){

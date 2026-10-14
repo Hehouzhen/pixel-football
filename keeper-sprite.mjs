@@ -1,14 +1,15 @@
+import {drawHeadDetails} from './appearance.mjs';
 const frames=new Map();
 
-function frame(pose,side,kit,skin,hair,gloves){
-  const key=[pose,side,kit,skin,hair,gloves].join('|');
+function frame(pose,side,kit,skin,hair,gloves,look){
+  const key=[pose,side,kit,skin,hair,gloves,JSON.stringify(look)].join('|');
   if(frames.has(key))return frames.get(key);
   const canvas=document.createElement('canvas');canvas.width=canvas.height=64;
   const c=canvas.getContext('2d');c.imageSmoothingEnabled=false;
-  const ink='#1a2025',shorts='#202b3b',boot='#f18339';
+  const ink='#1a2025',shorts='#202b3b',boot=look?.shoes??'#f18339';
   const box=(x,y,w,h,color,outline=true)=>{if(outline){c.fillStyle=ink;c.fillRect(x-2,y-2,w+4,h+4)}c.fillStyle=color;c.fillRect(x,y,w,h)};
   const limb=(x,y,w,h,color)=>box(x,y,w,h,color);
-  const head=(x,y,w,h)=>{c.fillStyle=ink;c.fillRect(x+3,y-2,w-6,3);c.fillRect(x,y+1,w,h-5);c.fillRect(x+2,y+h-4,w-4,3);c.fillStyle=skin;c.fillRect(x+2,y+4,w-4,h-9);c.fillRect(x+4,y+h-5,w-8,3);c.fillStyle=hair;c.fillRect(x+2,y+1,w-4,7);c.fillRect(x,y+5,7,6);c.fillRect(x+w-9,y+4,7,5);c.fillStyle=ink;c.fillRect(x+w-13,y+12,2,3);c.fillRect(x+w-6,y+12,2,3)};
+  const head=(x,y,w,h)=>{c.fillStyle=ink;c.fillRect(x+3,y-2,w-6,3);c.fillRect(x,y+1,w,h-5);c.fillRect(x+2,y+h-4,w-4,3);c.fillStyle=skin;c.fillRect(x+2,y+4,w-4,h-9);c.fillRect(x+4,y+h-5,w-8,3);c.fillStyle=look?.hairstyle===5?skin:hair;c.fillRect(x+2,y+1,w-4,7);c.fillRect(x,y+5,7,6);c.fillRect(x+w-9,y+4,7,5);c.fillStyle=ink;c.fillRect(x+w-13,y+12,2,3);c.fillRect(x+w-6,y+12,2,3);if(look){if(look.hairstyle===1){c.fillStyle=skin;c.fillRect(x+w*.45,y+1,2,5)}if(look.hairstyle===3){c.fillStyle=hair;c.fillRect(x,y+h*.5,3,h*.6);c.fillRect(x+w-3,y+h*.5,3,h*.6)}if(look.hairstyle===4){c.fillStyle=skin;c.fillRect(x,y+5,7,6);c.fillRect(x+w-9,y+4,7,5)}drawHeadDetails(c,{...look,skin,hair},{x,y,w,h,back:false})}};
   if(pose==='reach'||pose==='land'){
     const down=side>0,shift=down?8:-8;
     limb(12,42,11,6,boot);limb(17,35,13,8,shorts);
@@ -35,8 +36,8 @@ function frame(pose,side,kit,skin,hair,gloves){
   return canvas;
 }
 
-export function drawKeeper(ctx,{x,y,pose='idle',side=1,flip=false,kit,skin,hair,gloves='#eefaf2',size=46}){
-  const sprite=frame(pose,side,kit,skin,hair,gloves);
-  ctx.save();ctx.imageSmoothingEnabled=false;ctx.translate(Math.round(x),Math.round(y));ctx.scale(flip?-1:1,1);
+export function drawKeeper(ctx,{x,y,pose='idle',side=1,flip=false,kit,skin,hair,gloves='#eefaf2',look=null,size=46}){
+  const sprite=frame(pose,side,kit,skin,hair,gloves,look);
+  ctx.save();ctx.imageSmoothingEnabled=false;ctx.translate(Math.round(x),Math.round(y));ctx.scale((flip?-1:1)*({slim:.9,broad:1.1}[look?.build]??1),look?.heightScale??1);
   ctx.drawImage(sprite,-size/2,-size+10,size,size);ctx.restore();
 }

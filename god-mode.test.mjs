@@ -9,6 +9,7 @@ import {makeClubSlot,makeCareerSlot,exportBackup,importBackup} from './save-slot
 let season=createSeason('england','arsenal',5),id=season.rosterIds.arsenal[5];
 assert.throws(()=>editTeamName(season,'arsenal','新名字'));
 season.godMode=true;
+const legacyKeeperId=season.rosterIds.arsenal[0],legacyKeeper=editPlayer(season,null,legacyKeeperId,{attributes:{goalkeeping:88}}).season.playerData[legacyKeeperId];assert(['reflexes','handling','keeperPositioning','oneOnOne'].every(key=>legacyKeeper.attributes[key]===88),'legacy goalkeeper edits must still affect the new model');
 season=editTeamName(season,'arsenal','像素枪手');
 assert.equal(teamName(season,'arsenal'),'像素枪手');
 assert.equal(standings(season)[0].name,'像素枪手');
