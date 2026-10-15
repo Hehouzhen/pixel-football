@@ -1,0 +1,8 @@
+export const ICON_EDITION='icon-signing-v1';
+export const ICON_SPECS=[
+ {key:'messi',base:'real:lionel-messi',number:10,title:'红蓝流金',period:'2011–2012 · 巴塞罗那',club:'Barcelona',hairstyle:1,gameRole:'WG',position:5,attributes:{acceleration:99,dribbling:99,firstTouch:99,shooting:98,passing:97,offBall:99}},
+ {key:'zidane',base:'real:zinedine-zidane',number:5,title:'白金星环',period:'2002 · 皇家马德里',club:'Real Madrid',hairstyle:5,gameRole:'AM',position:4,attributes:{firstTouch:99,passing:99,decisions:99,composure:99,shielding:95,dribbling:98}},
+ {key:'maldini',base:'real:paolo-maldini',number:3,title:'红黑铁壁',period:'2003 · AC 米兰',club:'AC Milan',hairstyle:23,gameRole:'CB',position:1,attributes:{defense:99,marking:99,positioning:99,decisions:95,composure:99,aerial:90}}
+].map(row=>({...row,id:`card:${row.base}:${ICON_EDITION}`,image:`./icon-${row.key}-v1.png`}));
+
+export function iconCards(basePlayers){return ICON_SPECS.map(spec=>{const base=basePlayers.find(p=>p.id===spec.base);return {...base,id:spec.id,cardId:spec.id,specialEdition:ICON_EDITION,editionId:ICON_EDITION,editionName:`巨星签约 · ${spec.title}`,referencePeriod:spec.period,historicalPeriod:spec.period,club:spec.club,number:spec.number,position:spec.position,gameRole:spec.gameRole,overall:99,rarity:'legend',sourceKind:'活动特卡 · 历史设计估计',ratingBasis:'99 为巨星特卡等级；实战仍逐项读取能力，非全部能力 99',attributes:{...base.attributes,...spec.attributes},appearance:{...base.appearance,studio:1,skin:'#edc298',hair:'#30291f',hairstyle:spec.hairstyle,beard:0,highlights:false,headband:false,build:spec.key==='messi'?'slim':'standard',sockLength:'normal',shoes:spec.key==='messi'?'#e9c64a':'#252d3a'},cardArt:spec.image}})}

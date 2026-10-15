@@ -23,10 +23,10 @@ test('Dream Squad supports an isolated collection, formation and AI match entry'
   await page.screenshot({path:'test-results/dream-team-home.png',fullPage:true});
   await page.getByRole('button',{name:/进入 Dream Squad/}).click();
   await expect(page.getByRole('heading',{name:'Dream Squad',exact:true})).toBeVisible();
-  await expect(page.getByText('Demo 无限签约券').locator('..')).toContainText('∞');
+  await expect(page.getByText('可用签约券',{exact:true}).locator('..')).toContainText('20');
   await expect(page.locator('.dream-player-card')).toHaveCount(0);
   await page.getByRole('button',{name:'球探中心',exact:true}).click();
-  await expect(page.getByText(`当前卡池：${DREAM_PLAYERS.length} 张卡 · ${new Set(DREAM_PLAYERS.map(player=>player.footballerId)).size} 名球员身份。`)).toBeVisible();
+  await expect(page.getByText(`当前卡池：${dreamPackPool().length} 张卡 · ${new Set(DREAM_PLAYERS.map(player=>player.footballerId)).size} 名球员身份。`)).toBeVisible();
   await expect(page.locator('.dream-odds div b')).toHaveCount(4);
   await page.getByRole('button',{name:/传奇典藏/}).click();
   await expect(page.locator('.dream-pack-description')).toContainText(/当前卡池：\d+ 张卡 · \d+ 名球员身份。/);
@@ -58,7 +58,7 @@ test('Dream Squad supports an isolated collection, formation and AI match entry'
   const pendingIds=await page.evaluate(()=>JSON.parse(localStorage.getItem('pixel-pitch-dream-squad-v1')).pendingChoiceIds);
   expect(new Set(pendingIds.map(id=>DREAM_PLAYER_BY_ID[id].position)).size).toBe(3);
   await page.getByRole('button',{name:'暂不选择'}).click();
-  expect(await page.evaluate(()=>JSON.parse(localStorage.getItem('pixel-pitch-dream-squad-v1')).tickets)).toBe(100);
+  expect(await page.evaluate(()=>JSON.parse(localStorage.getItem('pixel-pitch-dream-squad-v1')).tickets)).toBe(19);
   await page.reload();
   await page.getByRole('button',{name:/进入 Dream Squad/}).click();
   await page.getByRole('button',{name:'球探中心',exact:true}).click();
@@ -68,7 +68,7 @@ test('Dream Squad supports an isolated collection, formation and AI match entry'
   await page.locator('.dream-choice-grid .dream-player-card').first().click();
   await page.getByRole('button',{name:'完成签约'}).click();
   const signed=await page.evaluate(()=>JSON.parse(localStorage.getItem('pixel-pitch-dream-squad-v1')));
-  expect(signed.pendingChoiceIds).toBeNull();expect(signed.contracts.choice).toBe(10);expect(signed.tickets).toBe(100);
+  expect(signed.pendingChoiceIds).toBeNull();expect(signed.contracts.choice).toBe(1);expect(signed.tickets).toBe(19);
   await page.screenshot({path:'test-results/dream-team-stage1-scout.png',fullPage:true});
   await page.getByRole('button',{name:'球员收藏',exact:true}).click();
   const ownedCount=await page.evaluate(()=>JSON.parse(localStorage.getItem('pixel-pitch-dream-squad-v1')).ownedIds.length);
@@ -76,10 +76,10 @@ test('Dream Squad supports an isolated collection, formation and AI match entry'
   await page.screenshot({path:'test-results/dream-team-binder.png',fullPage:true});
   await page.getByRole('combobox',{name:'筛选卡牌状态'}).selectOption('all');
   await expect(page.locator('.dream-card-grid .dream-player-card')).toHaveCount(DREAM_PLAYERS.length);
-  const unownedCard=page.locator('.dream-card-grid .dream-player-card.unowned').first(),unownedName=await unownedCard.locator('strong').innerText();
+  const unownedCard=page.locator('.dream-card-grid .dream-player-card.unowned').filter({has:page.locator('strong')}).first(),unownedName=await unownedCard.locator('strong').innerText();
   await unownedCard.click();await expect(page.locator('.dream-detail h3')).toHaveText(unownedName);
-  const models=await page.evaluate(()=>{const cards=[...document.querySelectorAll('.dream-player-card')],fingerprints=cards.map(card=>{const pixels=card.querySelector('canvas').getContext('2d').getImageData(0,0,120,180).data;let value=2166136261;for(let i=0;i<pixels.length;i+=4){value^=pixels[i];value=Math.imul(value,16777619)}return [card.dataset.playerId,value>>>0]});return [cards.length,new Set(fingerprints.map(([,hash])=>hash)).size,new Set(fingerprints.map(([id])=>id)).size,fingerprints.every(([id,hash])=>fingerprints.filter(row=>row[0]===id).every(row=>row[1]===hash))]});
-  const identityCount=new Set(DREAM_PLAYERS.map(player=>player.footballerId)).size;expect(models).toEqual([DREAM_PLAYERS.length,identityCount,identityCount,true]);
+  const models=await page.evaluate(()=>{const cards=[...document.querySelectorAll('.dream-player-card:not(:has(.icon-special-card))')],fingerprints=cards.map(card=>{const pixels=card.querySelector('canvas').getContext('2d').getImageData(0,0,120,180).data;let value=2166136261;for(let i=0;i<pixels.length;i+=4){value^=pixels[i];value=Math.imul(value,16777619)}return [card.dataset.playerId,value>>>0]});return [cards.length,new Set(fingerprints.map(([,hash])=>hash)).size,new Set(fingerprints.map(([id])=>id)).size,fingerprints.every(([id,hash])=>fingerprints.filter(row=>row[0]===id).every(row=>row[1]===hash))]});
+  const identityCount=new Set(DREAM_PLAYERS.map(player=>player.footballerId)).size;expect(models).toEqual([DREAM_PLAYERS.filter(p=>!p.specialEdition).length,identityCount,identityCount,true]);
   await page.reload();
   await page.getByRole('button',{name:/Dream Squad/}).first().click();
   await page.getByRole('button',{name:'组建阵容',exact:true}).click();
@@ -149,14 +149,14 @@ test('Finite card boxes, saved targets, explicit resets and world guarantee inte
   await expect(page.locator('.dream-box-progress')).toContainText('剩余 24 张');await expect(page.locator('.dream-odds div b').first()).toHaveText('8.3%');
   await page.getByText('查看完整卡盒名单 · 24 张').click();await expect(page.locator('.dream-box-list button')).toHaveCount(24);
   await page.getByRole('button',{name:/开启卡包/}).click();await page.getByRole('button',{name:'跳过登场',exact:true}).click();await page.getByRole('button',{name:'完成签约'}).click();
-  const after=await page.evaluate(()=>JSON.parse(localStorage.getItem('pixel-pitch-dream-squad-v1')));expect(after.boxDrawnIds).toHaveLength(1);expect(after.worldPity).toBe(DREAM_WORLD_PITY_LIMIT-1);expect(after.contracts.modern).toBe(30);
+  const after=await page.evaluate(()=>JSON.parse(localStorage.getItem('pixel-pitch-dream-squad-v1')));expect(after.boxDrawnIds).toHaveLength(1);expect(after.worldPity).toBe(DREAM_WORLD_PITY_LIMIT-1);expect(after.contracts.modern).toBe(9);
   await page.reload();await page.getByRole('button',{name:/进入 Dream Squad/}).click();await page.getByRole('button',{name:'球探中心',exact:true}).click();
   await page.getByRole('button',{name:/当代球员成长盒.*24 张真实基础卡盒/}).click();
   await expect(page.locator('.dream-box-progress')).toContainText('剩余 23 张');await expect(page.getByRole('combobox',{name:'选择目标球员卡'})).toHaveValue(DREAM_MODERN_BOX_IDS[0]);
   await page.getByRole('button',{name:'重置卡盒',exact:true}).click();await expect(page.getByRole('dialog',{name:'重置当代球员成长盒？'})).toBeVisible();
   await page.keyboard.press('Escape');await expect(page.getByRole('dialog')).toHaveCount(0);await expect(page.locator('.dream-box-progress')).toContainText('剩余 23 张');
   await page.getByRole('button',{name:'重置卡盒',exact:true}).click();await page.getByRole('button',{name:'确认重置卡盒'}).click();await expect(page.locator('.dream-box-progress')).toContainText('剩余 24 张');
-  expect(await page.evaluate(()=>JSON.parse(localStorage.getItem('pixel-pitch-dream-squad-v1')).contracts.modern)).toBe(30);
+  expect(await page.evaluate(()=>JSON.parse(localStorage.getItem('pixel-pitch-dream-squad-v1')).contracts.modern)).toBe(9);
   await page.setViewportSize({width:390,height:844});await expect.poll(()=>page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
   await page.screenshot({path:'test-results/dream-team-stage2-mobile.png',fullPage:true});await page.setViewportSize({width:1440,height:1000});
   await page.getByRole('button',{name:/世界球探.*完整球员世界/}).click();await page.getByRole('button',{name:/开启卡包/}).click();
@@ -171,9 +171,9 @@ test('An exhausted box disables drawing and preserves the balance on reset',asyn
   await page.goto('/');await page.getByRole('button',{name:/进入 Dream Squad/}).click();await page.getByRole('button',{name:'球探中心',exact:true}).click();await page.getByRole('button',{name:/当代球员成长盒.*24 张真实基础卡盒/}).click();
   await expect(page.locator('.dream-box-progress')).toContainText('剩余 1 张');await page.getByRole('button',{name:/开启卡包/}).click();await page.getByRole('button',{name:'完成签约'}).click();
   await expect(page.locator('.dream-box-progress')).toContainText('剩余 0 张');await expect(page.getByRole('button',{name:/开启卡包/})).toBeDisabled();
-  const data=await page.evaluate(()=>JSON.parse(localStorage.getItem('pixel-pitch-dream-squad-v1')));expect(data.boxDrawnIds).toHaveLength(24);expect(data.contracts.modern).toBe(30);
+  const data=await page.evaluate(()=>JSON.parse(localStorage.getItem('pixel-pitch-dream-squad-v1')));expect(data.boxDrawnIds).toHaveLength(24);expect(data.contracts.modern).toBe(9);
   await page.getByRole('button',{name:'重置卡盒',exact:true}).click();await page.getByRole('button',{name:'确认重置卡盒'}).click();await expect(page.getByRole('button',{name:/开启卡包/})).toBeEnabled();
-  expect(await page.evaluate(()=>JSON.parse(localStorage.getItem('pixel-pitch-dream-squad-v1')).contracts.modern)).toBe(30);
+  expect(await page.evaluate(()=>JSON.parse(localStorage.getItem('pixel-pitch-dream-squad-v1')).contracts.modern)).toBe(9);
 });
 
 
@@ -196,7 +196,7 @@ test('Independent formation presets, event progress, budget enforcement and tact
 
 test('The archive scouting pack expands the player world with unchanged published rates',async({page})=>{
   await page.goto('/');await page.getByRole('button',{name:/进入 Dream Squad/}).click();await page.getByRole('button',{name:'球探中心',exact:true}).click();
-  await expect(page.locator('.dream-scout')).toContainText('1681 名球员身份，1681 张卡牌版本');
+  await expect(page.locator('.dream-scout')).toContainText('1681 名球员身份，1684 张卡牌版本');
   await expect(page.locator('.dream-odds div').first()).toContainText('张卡');
   await expect(page.locator('.dream-rating-chance')).toContainText('90+ 总评概率：1.50%');
   await expect(page.locator('.dream-pity').last()).toContainText('85+ 8.33%、90+ 1.92%');
@@ -226,8 +226,8 @@ test('earned star signing grants the selected 90+ card without randomness',async
   await page.addInitScript(data=>localStorage.setItem('pixel-pitch-dream-squad-v1',JSON.stringify(data)),seed);
   await page.goto('/');await page.getByRole('button',{name:/进入 Dream Squad/}).click();await page.getByRole('button',{name:'球探中心',exact:true}).click();
   await page.getByRole('textbox',{name:'搜索巨星签约目标'}).fill(target.name);await page.getByRole('combobox',{name:'选择巨星签约目标'}).selectOption(targetId);
-  await page.getByRole('button',{name:'巨星自选签约 · 无限'}).click();
-  const result=await page.evaluate(()=>JSON.parse(localStorage.getItem('pixel-pitch-dream-squad-v1')));expect(result.contracts.star).toBe(1);expect(result.ownedIds).toContain(targetId);expect(target.overall).toBeGreaterThanOrEqual(90);
+  await page.getByRole('button',{name:'巨星自选签约 · 1 合同'}).click();
+  const result=await page.evaluate(()=>JSON.parse(localStorage.getItem('pixel-pitch-dream-squad-v1')));expect(result.contracts.star).toBe(0);expect(result.ownedIds).toContain(targetId);expect(target.overall).toBeGreaterThanOrEqual(90);
 });
 
 test('star signing defaults to the visible unowned card and signs that exact choice',async({page})=>{
@@ -235,6 +235,6 @@ test('star signing defaults to the visible unowned card and signs that exact cho
   await page.addInitScript(data=>localStorage.setItem('pixel-pitch-dream-squad-v1',JSON.stringify(data)),seed);
   await page.goto('/');await page.getByRole('button',{name:/进入 Dream Squad/}).click();await page.getByRole('button',{name:'球探中心',exact:true}).click();
   const selector=page.getByRole('combobox',{name:'选择巨星签约目标'}),visibleTarget=await selector.inputValue();expect(visibleTarget).not.toBe(highest.id);
-  await page.getByRole('button',{name:'巨星自选签约 · 无限'}).click();const result=await page.evaluate(()=>JSON.parse(localStorage.getItem('pixel-pitch-dream-squad-v1')));
-  expect(result.contracts.star).toBe(1);expect(result.ownedIds).toContain(visibleTarget);expect(result.ownedIds).toContain(highest.id);
+  await page.getByRole('button',{name:'巨星自选签约 · 1 合同'}).click();const result=await page.evaluate(()=>JSON.parse(localStorage.getItem('pixel-pitch-dream-squad-v1')));
+  expect(result.contracts.star).toBe(0);expect(result.ownedIds).toContain(visibleTarget);expect(result.ownedIds).toContain(highest.id);
 });

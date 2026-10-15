@@ -15,6 +15,7 @@ function PitchMotif({tone}){
 }
 
 export function DreamPremiumCard({player}){
+  if(player.cardArt)return <img className="dream-premium-card icon-special-card" data-premium-card-id={player.id} src={player.cardArt} alt={`${player.name} · ${player.editionName} · 99 分像素特卡`} width="1024" height="1536"/>;
   const tone=toneFor(player),current=player.era==='current',period=current?'ACTIVE':(player.referencePeriod?.split(' ')[0]??'PEAK'),surname=player.name.replace(/\s+(Jr\.?|Júnior)$/i,'').split(' ').at(-1);
   return <div className={`dream-premium-card tone-${tone}`} data-premium-card-id={player.id}>
     <div className="premium-header"><span className="premium-edition"><b>PP</b><span>{current?'CURRENT XI':'THE ARCHIVE'}<small>{player.editionName}</small></span></span><span className="premium-overall">{player.overall}<small>OVR</small></span></div>

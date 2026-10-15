@@ -37,7 +37,7 @@ test('事件模拟可暂停、调整战术、换人、观看播报并保存恢�
   await page.getByLabel('模拟本队战术').selectOption('counter');await page.getByLabel('模拟换下球员').selectOption(outId);await page.getByLabel('模拟换上球员').selectOption(reserve.id);await page.getByRole('button',{name:'确认换人',exact:true}).click();await expect(page.getByRole('status').filter({hasText:'换人已生效'})).toBeVisible();
   await page.getByLabel('播报筛选').selectOption('all');await expect(page.getByRole('complementary',{name:'比赛事件播报'})).toContainText(reserve.name);
   mkdirSync('test-results',{recursive:true});await page.evaluate(()=>window.scrollTo(0,0));await page.screenshot({path:'test-results/simulation-desktop.png',fullPage:true});await page.setViewportSize({width:390,height:844});await expect.poll(()=>page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBe(true);await page.screenshot({path:'test-results/simulation-mobile.png',fullPage:true});await page.setViewportSize({width:1440,height:1000});
-  await finishSimulation(page);const saved=(await readIndexedSave(page)).slots[0].season,result=saved.results.find(r=>r.home==='arsenal'||r.away==='arsenal');expect(saved.week).toBe(1);expect(saved.tactic).toBe('counter');expect(result.simulationVersion).toBe(3);expect(result.playerStats.length).toBeGreaterThanOrEqual(13);expect(result.playerStats.length).toBeLessThanOrEqual(18);expect(result.playerStats.find(p=>p.playerId===reserve.id).started).toBe(false);expect(result.journal.some(e=>e.type==='substitution')).toBe(true);expect(result.goalEvents).toHaveLength(result.score[0]+result.score[1]);expect(saved.players[reserve.id].appearances).toBe(1);
+  await finishSimulation(page);const saved=(await readIndexedSave(page)).slots[0].season,result=saved.results.find(r=>r.home==='arsenal'||r.away==='arsenal');expect(saved.week).toBe(1);expect(saved.tactic).toBe('counter');expect(result.simulationVersion).toBe(4);expect(result.playerStats.length).toBeGreaterThanOrEqual(13);expect(result.playerStats.length).toBeLessThanOrEqual(18);expect(result.playerStats.find(p=>p.playerId===reserve.id).started).toBe(false);expect(result.journal.some(e=>e.type==='substitution')).toBe(true);expect(result.goalEvents).toHaveLength(result.score[0]+result.score[1]);expect(saved.players[reserve.id].appearances).toBe(1);
   await page.reload();await page.getByRole('button',{name:/继续俱乐部/}).click();await page.getByRole('button',{name:'赛事数据'}).click();await page.getByLabel('统计球队').selectOption('arsenal');await page.getByRole('button',{name:/查看比赛详情/}).first().click();await page.getByText(/展开比赛事件/).click();await expect(page.locator('.saved-match-journal')).toContainText(reserve.name);expect(errors).toEqual([]);
 });
 
@@ -367,15 +367,13 @@ test('俱乐部与 MyCareer 的赛季总结、休赛期和新赛季开幕可恢�
   await expect(page.getByText(/NEXT MATCH \/ 第 1 轮/)).toBeVisible();
 });
 
-test('MyCareer 创建后刷新仍能恢复球员档案',async({page})=>{
+test('旧 MyCareer 的目标、合同与档案刷新后继续可用',async({page})=>{
   const pageErrors=[];
   page.on('pageerror',error=>pageErrors.push(error.message));
+  const fixture=createSeason('england','arsenal',41),fixturePlayer=createCareerPlayer('QA 测试球员',10,'forward');prepareSeason(fixture,fixturePlayer);await page.addInitScript(({key,data})=>localStorage.setItem(key,JSON.stringify(data)),{key:SAVE_KEY,data:{version:2,active:0,slots:[makeCareerSlot(fixture,fixturePlayer),null,null]}});
   await page.goto('/');
   await expect(page.getByRole('heading',{name:'你的足球世界'})).toBeVisible();
-  await page.getByRole('button',{name:/新建 MyCareer/}).last().click();
-  await expect(page.getByRole('heading',{name:'创建你的球员'})).toBeVisible();
-  await page.getByLabel('球员姓名').fill('QA 测试球员');
-  await page.getByRole('button',{name:'开始职业生涯'}).click();
+  await page.getByRole('button',{name:/继续生涯/}).click();
   const goal=page.getByLabel('本赛季个人目标');await expect(goal).toBeVisible();await goal.selectOption('goal-contributions');
   await expect(page.getByRole('region',{name:'欧冠入口'})).toContainText(/(已获得|未获得)欧冠资格/);
   await expect(page.getByText('QA 测试球员').first()).toBeVisible();
@@ -452,7 +450,7 @@ test('小屏幕主要创建流程没有页面级横向溢出',async({page})=>{
   await expect(page.getByRole('heading',{name:'俱乐部',exact:true})).toBeVisible();
   await expect.poll(()=>page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBe(true);
   await page.getByRole('button',{name:'首页'}).click();
-  await page.getByRole('button',{name:/新建 MyCareer/}).last().click();
+  await page.getByRole('button',{name:/新建 MyCareer/}).last().click();await page.getByRole('button',{name:'球员',exact:true}).click();
   await expect(page.getByRole('heading',{name:'创建你的球员'})).toBeVisible();
   await expect.poll(()=>page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBe(true);
 });
@@ -472,7 +470,7 @@ test('渲染异常被页面级兜底捕获',async({page})=>{
 });
 test('像素球员外观组合、正背面预览与存档恢复',async({page})=>{
   const errors=[];page.on('pageerror',e=>errors.push(e.message));
-  await page.goto('/');await page.getByRole('button',{name:/新建 MyCareer/}).last().click();
+  await page.goto('/');await page.getByRole('button',{name:/新建 MyCareer/}).last().click();await page.getByRole('button',{name:'球员',exact:true}).click();
   const studio=page.locator('.appearance-studio-v2');await studio.getByRole('button',{name:'脏辫',exact:true}).click();
   await studio.getByLabel('局部挑染').check();await studio.getByLabel('自选发色').fill('#864a98');
   await studio.getByRole('button',{name:'面容',exact:true}).click();await studio.getByRole('button',{name:'络腮胡',exact:true}).click();
@@ -486,9 +484,9 @@ test('像素球员外观组合、正背面预览与存档恢复',async({page})=>
   await page.setViewportSize({width:390,height:844});await expect(studio.getByRole('button',{name:'高筒',exact:true})).toBeVisible();
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBe(true);
   await page.screenshot({path:'test-results/appearance-mobile.png',fullPage:true});
-  await page.getByRole('button',{name:'开始职业生涯'}).click();await expect(page.locator('.header-note')).toContainText('已保存');
+  await page.getByRole('button',{name:'愿望',exact:true}).click();await page.getByRole('button',{name:'开始职业生涯'}).click();await expect(page.locator('.header-note')).toContainText('已保存');
   const saved=await readIndexedSave(page),look=saved.slots[0].player.appearance;expect(look).toMatchObject({hairstyle:10,hair:'#864a98',headband:true,highlights:true,beard:3,wrist:'both',sockLength:'high'});
-  await page.reload();await page.getByRole('button',{name:/继续生涯/}).click();await page.getByRole('button',{name:'我的球员'}).click();
+  await page.reload();await page.getByRole('button',{name:/继续生涯/}).click();await page.getByRole('button',{name:'我的足球',exact:true}).click();
   await page.locator('.player-customization .as-rail').getByRole('button',{name:'头发'}).click();
   await expect(page.locator('.player-customization .as-head-option[aria-pressed="true"]')).toHaveText('脏辫');
   await page.locator('.player-customization .as-rail').getByRole('button',{name:'装备'}).click();

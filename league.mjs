@@ -28,7 +28,7 @@ export function prepareSeason(season,career=null){if(season&&!isAttackPattern(se
 const stableRoll=text=>{let n=2166136261;for(const char of text){n^=char.charCodeAt(0);n=Math.imul(n,16777619)}return (n>>>0)/4294967296};
 function retirePlayerIdentity(season,id,year,reason){const player=season.playerData?.[id];if(!player||player.retired)return null;const teamId=player.teamId,index=player.position,replacement=generateProspect(season.playerData,teamId,index,year,player.number),replacementId=replacement.id;
   player.retired=true;player.retiredYear=year;player.retirementSeason=(season.history?.length??0)+1;
-  season.playerData[replacementId]=replacement;const slot=season.rosterIds[teamId].indexOf(id);if(slot>=0)season.rosterIds[teamId][slot]=replacementId;if(season.squadIds?.[teamId])season.squadIds[teamId]=season.squadIds[teamId].map(other=>other===id?replacementId:other);season.names??={};season.names[`${teamId}:${index}`]=replacement.name;
+  season.playerData[replacementId]=replacement;const slot=season.rosterIds[teamId].indexOf(id);if(slot>=0)season.rosterIds[teamId][slot]=replacementId;if(season.squadIds?.[teamId])season.squadIds[teamId]=season.squadIds[teamId].map(other=>other===id?replacementId:other);season.names??={};if(slot>=0)season.names[`${teamId}:${slot}`]=replacement.name;
   season.retirements=[...(season.retirements??[]),{id,name:player.name,teamId,age:player.age,year,reason,replacementId}];
   return {id,replacementId,teamId,index};
 }

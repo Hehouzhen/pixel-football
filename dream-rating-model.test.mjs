@@ -6,7 +6,7 @@ import {DREAM_RATING_MODEL_VERSION,DREAM_ROLE_WEIGHTS,dreamGameRole,dreamOverall
 import {DREAM_CATALOG_METADATA,DREAM_CARD_MIGRATIONS} from './dream-player-catalog.mjs';
 
 assert.equal(DREAM_RATING_MODEL_VERSION,4);
-assert.equal(DREAM_PLAYERS.length,1681);
+assert.equal(DREAM_PLAYERS.length,1684);
 assert(DREAM_CATALOG_METADATA.newOrdinaryIdentities>=1000);
 assert.equal(DREAM_CATALOG_METADATA.deletedCareerCards,282);
 assert.equal(DREAM_CATALOG_METADATA.selectedRosters.length,52);
@@ -14,7 +14,7 @@ assert.equal(new Set(DREAM_CATALOG_METADATA.selectedRosters.map(row=>row[0])).si
 for(const weights of Object.values(DREAM_ROLE_WEIGHTS))assert(Math.abs(Object.values(weights).reduce((a,b)=>a+b,0)-1)<1e-9);
 assert(!DREAM_PLAYERS.some(p=>p.editionId==='career-start-2026'||p.editionId==='icon-moments-2026'||p.editionId==='peak-season-2026'));
 assert.equal(new Set(DREAM_PLAYERS.map(p=>p.id)).size,DREAM_PLAYERS.length);
-assert.equal(new Set(DREAM_PLAYERS.map(p=>p.footballerId)).size,DREAM_PLAYERS.length);
+assert.equal(new Set(DREAM_PLAYERS.map(p=>p.footballerId)).size,1681);
 assert.equal(new Set(DREAM_PLAYERS.map(p=>JSON.stringify(p.appearance))).size,DREAM_PLAYERS.length);
 for(const p of DREAM_PLAYERS){
   assert.equal(p.gameRole,dreamGameRole(p));assert.equal(p.overall,dreamOverall(p));
@@ -44,7 +44,7 @@ assert(find('Manuel Neuer').role.id==='keeper-sweeper');
 assert(find('Gianluigi Buffon').attributes.shooting<30&&find('Gianluigi Buffon').attributes.reflexes>=95);
 assert(find('Andriy Shevchenko').attributes.defense<40);
 assert(find('Endrick').overall<85&&find('Pau Cubarsí').overall<90);
-assert(DREAM_PLAYERS.every(p=>p.overall<99),'no automatic 99-point slots');
+assert(DREAM_PLAYERS.filter(p=>!p.specialEdition).every(p=>p.overall<99),'no automatic 99-point slots');
 assert(DREAM_PLAYERS.filter(p=>p.id.startsWith('real:zzzzzz-ea-')&&p.overall<85).length>=1000,'ordinary professionals supply the lower bands');
 assert.equal(find('Alisson Becker').eaId,212831);assert.equal(find('Dani Carvajal').eaId,204963);assert.equal(find('Reece James').eaId,238074);
 assert.equal(find('Son Heung-min').eaId,200104);assert.equal(find('Vinícius Júnior').eaId,238794);

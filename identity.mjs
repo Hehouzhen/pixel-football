@@ -1,4 +1,5 @@
 import {ensureFootballLife} from './football-life.mjs';
+import {careerDeal} from './player-value.mjs';
 import {LEAGUES,getTeam} from './clubs.mjs';
 import {playerAgeProfile,seasonStartYear} from './aging.mjs';
 import {ensureRatings,positionRating} from './ratings.mjs';
@@ -113,6 +114,7 @@ export function ensureIdentity(season,nameFor,career=null){
 
 export function activePlayers(season,teamId){return (season.rosterIds?.[teamId]??[]).map(id=>season.playerData[id])}
 export function carryIdentity(oldSeason,newSeason,career=null){
+  if(oldSeason.teamId===newSeason.teamId){if(oldSeason.teamSetup)newSeason.teamSetup=structuredClone(oldSeason.teamSetup);if(oldSeason.tactic)newSeason.tactic=oldSeason.tactic;}
   newSeason.rosterIds=structuredClone(oldSeason.rosterIds);
   newSeason.playerData=structuredClone(oldSeason.playerData);
   newSeason.pairChemistry=Object.fromEntries(Object.entries(oldSeason.pairChemistry??{}).flatMap(([key,score])=>{
@@ -126,7 +128,18 @@ export function carryIdentity(oldSeason,newSeason,career=null){
   newSeason.freeAgents=[...new Set(oldSeason.freeAgents??[])];
   newSeason.teamNames={...oldSeason.teamNames};
   newSeason.godMode=!!oldSeason.godMode;
-  if(career&&oldSeason.teamId!==newSeason.teamId){
+  if(career?.journey&&oldSeason.teamId!==newSeason.teamId){
+    const id=career.id,from=oldSeason.teamId,to=newSeason.teamId,year=newSeason.calendar?.startYear??2026,deal=careerDeal(career,oldSeason,to,career.transferOffer?.kind);if(!deal.affordable)throw new Error('球队预算不足，无法完成转会');
+    newSeason.worldFunds??={};const funds=teamId=>oldSeason.worldFunds?.[teamId]??(teamId===from&&oldSeason.balance!=null?oldSeason.balance:16+(getTeam(teamId)?.strength??1)*18);newSeason.worldFunds[from]=+(funds(from)+deal.fee).toFixed(2);newSeason.worldFunds[to]=+(funds(to)-deal.fee).toFixed(2);newSeason.balance=newSeason.worldFunds[to];newSeason.playerData[id].contractEndYear=year+deal.years;newSeason.playerData[id].contractWage=deal.annualWage;
+    const oldSlot=newSeason.rosterIds[from].indexOf(id);
+    if(oldSlot>=0){const reserve=(newSeason.squadIds[from]??[]).map(key=>newSeason.playerData[key]).filter(p=>p.id!==id&&!newSeason.rosterIds[from].includes(p.id)&&!p.retired&&!p.freeAgent&&(p.position===0?0:p.position<3?1:p.position<5?3:5)===(oldSlot<3?1:oldSlot<5?3:5)).sort((a,b)=>positionRating(b)-positionRating(a))[0];if(reserve)newSeason.rosterIds[from][oldSlot]=reserve.id;else{const replacement=generateProspect(newSeason.playerData,from,oldSlot,year,career.number);newSeason.playerData[replacement.id]=replacement;newSeason.rosterIds[from][oldSlot]=replacement.id;newSeason.squadIds[from].push(replacement.id);}}
+    newSeason.squadIds[from]=(newSeason.squadIds[from]??[]).filter(key=>key!==id);newSeason.squadIds[to]=[...new Set([...(newSeason.squadIds[to]??newSeason.rosterIds[to]),id])];newSeason.playerData[id].teamId=to;
+    const kind=career.transferOffer?.kind??'transfer';if(kind==='loan')career.journey.loan={parentTeamId:from,returnYear:year+1};else if(career.journey.loan)delete career.journey.loan;
+    career.journey.seekLoan=false;career.journey.clubGames=0;career.journey.trust=38;career.journey.firstStart=false;career.journey.clubs=[...career.journey.clubs,to].slice(-100);career.journey.pending='first-contract';career.journey.resolved=career.journey.resolved.filter(key=>!['first-contract','identity','partnership','setback','reunion'].includes(key));
+    const transfer={eventId:'career-transfer:'+id+':'+year,playerId:id,playerName:career.name,season:(oldSeason.history?.length??0)+1,year,from,to,fromName:teamName(oldSeason,from),toName:teamName(newSeason,to),fromLeagueId:oldSeason.leagueId,toLeagueId:newSeason.leagueId,fee:deal.fee,marketValue:deal.marketValue,annualWage:deal.annualWage,years:deal.years,reason:kind==='loan'?'loan':kind==='return'?'loan-return':'player-choice',expectedRole:career.transferOffer?.expectedRole??'轮换竞争者'};
+    career.transferHistory=[...(career.transferHistory??[]),transfer].slice(-100);newSeason.playerData[id].transferHistory=[...(newSeason.playerData[id].transferHistory??[]),transfer].slice(-100);
+    career.journey.memories=[...career.journey.memories,{id:transfer.eventId,title:kind==='loan'?'去另一片球场寻找机会':kind==='return'?'回到原队，再争取一次':'新的更衣室',text:transfer.fromName+' → '+transfer.toName+'。'+transfer.expectedRole,kind:'milestone',chapter:'professional'}].slice(-80);
+  }else if(career&&oldSeason.teamId!==newSeason.teamId){
     const id=career.id??oldSeason.rosterIds[oldSeason.teamId][career.index];
     const targetId=oldSeason.rosterIds[newSeason.teamId][career.index],target=newSeason.playerData[targetId],year=newSeason.calendar?.startYear??2026+(oldSeason.history?.length??0)+1,replacement=generateProspect(newSeason.playerData,oldSeason.teamId,career.index,year,newSeason.playerData[id]?.number);
     newSeason.playerData[replacement.id]=replacement;

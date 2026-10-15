@@ -15,6 +15,7 @@ export const DREAM_ROLE_WEIGHTS={
 };
 export function dreamGameRole(player){return player.gameRole}
 export function dreamOverall(player,role=dreamGameRole(player)){
+  if(player.specialEdition==='icon-signing-v1')return 99;
   const weights=DREAM_ROLE_WEIGHTS[role];
   if(!weights)throw new Error(`Unknown Dream Squad role: ${role}`);
   return Math.round(Object.entries(weights).reduce((sum,[ability,weight])=>sum+skillValue(player.attributes,ability)*Math.round(weight*100),0)/100);

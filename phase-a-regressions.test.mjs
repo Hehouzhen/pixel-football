@@ -18,8 +18,8 @@ handlePassInput(careerOwnBall,true);
 assert.deepEqual(aimedTarget,{x:700,y:280},'controlled MyCareer player keeps pointer-directed passing');
 const opponentHasBall=new Match({careerIndex:5});opponentHasBall.state='playing';opponentHasBall.ball.owner=11;let requestsWithoutBall=0;opponentHasBall.requestPass=()=>{requestsWithoutBall++;return false};
 handlePassInput(opponentHasBall);assert.equal(requestsWithoutBall,1,'MyCareer can request the ball while the opponent has possession');
-const clubPass=new Match();clubPass.state='playing';clubPass.ball.owner=3;let clubKicks=0;clubPass.kick=()=>{clubKicks++;return true};
-handlePassInput(clubPass);assert.equal(clubKicks,1,'club mode keeps teammate-directed passing behavior');
+const clubPass=new Match();clubPass.state='playing';clubPass.ball.owner=3;clubPass.selected[0]=3;let clubKicks=0;clubPass.kick=()=>{clubKicks++;return true};
+handlePassInput(clubPass);assert.equal(clubKicks,1,'club mode passes from the controlled ball carrier');
 
 for(let seed=1;seed<=35;seed++)for(const [home,away] of [['arsenal','chelsea'],['bayern','dortmund'],['milan','inter']]){
   const season=createSeason('england','arsenal',seed),match=simulateFixture(season,home,away,seed);

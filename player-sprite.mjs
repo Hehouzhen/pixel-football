@@ -60,7 +60,7 @@ export function spritePose(player,time,celebrating=false,phase=0,charge=0){
   if(player.dive>0)return [2,4];
   if(player.tackleWindup>0)return [2,1];
   if(Number.isFinite(player.tackleAt)&&time-player.tackleAt>=0&&time-player.tackleAt<.3)return [2,3];
-  if(Number.isFinite(player.kickAt)&&time-player.kickAt>=0&&time-player.kickAt<.36){const age=time-player.kickAt;return player.kickType==='header'?[2,2]:player.kickType==='shot'?(age<.1?[2,2]:age<.22?[2,4]:[2,5]):[2,Math.min(5,4+Math.floor(age*6))]}
+  if(Number.isFinite(player.kickAt)&&time-player.kickAt>=0&&time-player.kickAt<.36){const age=time-player.kickAt;return player.kickType==='header'?[2,2]:player.kickType==='shot'?(age<.12?[2,4]:[2,5]):[2,Math.min(5,4+Math.floor(age*6))]}
   if(player.aiKick)return [2,Math.min(3,Math.floor((time-player.aiKick.started)/.025))];
   if(charge>0)return [2,charge<.45?0:1];
   if(Math.hypot(player.vx??0,player.vy??0)>15)return [1,Math.floor(Math.abs(player.anim??0)*.45)%6];

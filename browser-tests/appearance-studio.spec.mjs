@@ -7,7 +7,7 @@ async function savedPlayer(page){return page.evaluate(({database,store})=>new Pr
 
 test('MyCareer 外观在编辑器、动作帧和存档中一致',async({page})=>{
   const errors=[];page.on('pageerror',error=>errors.push(error.message));
-  await page.goto('/');await page.getByRole('button',{name:/新建 MyCareer/}).click();
+  await page.goto('/');await page.getByRole('button',{name:/新建 MyCareer/}).click();await page.getByRole('button',{name:'球员',exact:true}).click();
   await expect(page.locator('.as-head-option')).toHaveCount(24);
   await page.getByRole('button',{name:'波浪长发',exact:true}).click();
   await page.getByRole('button',{name:'面容',exact:true}).click();
@@ -20,11 +20,11 @@ test('MyCareer 外观在编辑器、动作帧和存档中一致',async({page})=>
   await expect.poll(()=>page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
   await page.screenshot({path:'test-results/appearance-create-mobile-live.png',fullPage:true});
   await page.setViewportSize({width:1440,height:1000});
-  await page.getByRole('button',{name:'开始职业生涯'}).click();
+  await page.getByRole('button',{name:'愿望',exact:true}).click();await page.getByRole('button',{name:'开始职业生涯'}).click();
   await expect.poll(async()=>savedPlayer(page)).toMatchObject({appearance:{studio:1,hairstyle:23,beard:7,brows:5,bandStyle:1,headband:true,wrist:'both'}});
   await page.reload();await page.getByRole('button',{name:'继续生涯'}).click();
-  await expect(page.locator('.career-profile .pixel-player, .season-identity .pixel-player').first()).toBeVisible();
-  await page.getByRole('button',{name:'我的球员'}).click();
+  await expect(page.locator('.journey-scene')).toBeVisible();
+  await page.getByRole('button',{name:'我的足球',exact:true}).click();
   await expect(page.locator('.player-customization .appearance-studio-v2')).toBeVisible();
   await page.locator('.player-customization .as-rail').getByRole('button',{name:'头发'}).click();
   await expect(page.locator('.player-customization .as-head-option[aria-pressed="true"]')).toHaveText('波浪长发');
