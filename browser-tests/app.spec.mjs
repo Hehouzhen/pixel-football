@@ -339,8 +339,10 @@ test('俱乐部与 MyCareer 的赛季总结、休赛期和新赛季开幕可恢�
   season.seenAwards=['league','europe'];careerSeason.seenAwards=['league','europe'];prepareSeason(careerSeason,career);
   const data={version:2,active:0,slots:[makeClubSlot(season),makeCareerSlot(careerSeason,career),null]},storage={value:null,setItem(key,value){this.value=value}};
   saveSaveData(data,storage);
-  await page.addInitScript(({key,value})=>localStorage.setItem(key,value),{key:SAVE_KEY,value:storage.value});
-  await page.goto('/');await page.getByRole('button',{name:/继续俱乐部/}).click();
+  // Two full seasons exceed localStorage quota; seed the production IndexedDB store.
+  await page.goto('/');await expect(page.getByRole('heading',{name:'你的足球世界'})).toBeVisible();
+  await page.evaluate(({database,store,data})=>new Promise((resolve,reject)=>{const opening=indexedDB.open(database,2);opening.onerror=()=>reject(opening.error);opening.onsuccess=()=>{const db=opening.result,tx=db.transaction(store,'readwrite');tx.objectStore(store).put(JSON.parse(data),'slots');tx.oncomplete=()=>{db.close();resolve()};tx.onerror=()=>reject(tx.error)}}),{database:SAVE_DB_NAME,store:SAVE_DB_STORE,data:exportBackup(data)});
+  await page.reload();await page.getByRole('button',{name:/继续俱乐部/}).click();
   await expect(page.getByText(/SEASON REVIEW/)).toBeVisible();
   await page.getByRole('button',{name:/进入休赛期并生成新赛季/}).click();
   await expect(page.getByRole('heading',{name:'新赛季开幕'})).toBeVisible();
@@ -529,6 +531,9 @@ test('无欧冠资格的 MyCareer 联赛结束后可进入下一赛季，旧档�
  let {season,player}=professionalFixture();startCup(season);let staleCup;
  for(let i=0;i<30;i++){const next=simulateNextScheduled(season,player);season=next.season;player=next.career;if(i===28)staleCup=structuredClone(season.cup)}
  expect(season.cup.teams).not.toContain(season.teamId);season.cup=staleCup;
+ // Restore a genuinely old snapshot, without receipts from its discarded future cup rounds.
+ const storedMatches=new Set([season,...Object.values(season.world),staleCup].flatMap(state=>state.results.map(row=>row.matchId)));
+ season.matchSettlements=season.matchSettlements.filter(row=>storedMatches.has(row.matchId));season.lifeSettlements=season.lifeSettlements.filter(id=>storedMatches.has(id));
  const storage={value:null,setItem(key,value){this.value=value}};saveSaveData({version:2,active:0,slots:[makeCareerSlot(season,player),null,null]},storage);
  await page.addInitScript(({key,value})=>localStorage.setItem(key,value),{key:SAVE_KEY,value:storage.value});await page.goto('/');await page.getByRole('button',{name:/继续生涯/}).click();
  for(let i=0;i<2;i++)if(await page.getByRole('button',{name:'继续赛季 →'}).isVisible())await page.getByRole('button',{name:'继续赛季 →'}).click();
