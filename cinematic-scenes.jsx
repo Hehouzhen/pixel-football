@@ -7,7 +7,7 @@ const EMPTY=[];
 function drawScene(ctx,image,kind,time,player,team,cast,mobile){
  const f=sceneFrame(kind,time),look=player.appearance??{},kit=team?.color??'#85c9ed',width=640;
  ctx.save();ctx.imageSmoothingEnabled=false;if(mobile)ctx.translate(-80,0);
- const r=(x,y,w,h,c)=>{ctx.fillStyle=c;ctx.fillRect(Math.round(x),Math.round(y),w,h)};
+ const r=(x,y,w,h,c)=>{ctx.fillStyle=c;ctx.fillRect(Math.round(x),Math.round(y),Math.round(w),Math.round(h))};
  const sprite=(x,y,size,options={})=>drawSprite(ctx,{x:Math.round(x),y:Math.round(y),size,row:0,col:0,kit,skin:look.skin,hair:look.hair,shoes:look.boots??'#f0b15c',hairstyle:look.hairstyle??0,look,...options});
  const cup=(x,y)=>{r(x-10,y,20,3,'#eed799');r(x-8,y+3,16,13,'#c39a4d');r(x-5,y+3,5,10,'#f4dc9b');r(x-14,y+3,4,10,'#c39a4d');r(x+10,y+3,4,10,'#c39a4d');r(x-12,y+12,8,3,'#c39a4d');r(x+4,y+12,8,3,'#c39a4d');r(x-3,y+16,6,10,'#dfbd6e');r(x-10,y+26,20,4,'#9c793f');r(x-12,y+30,24,5,'#233447')};
  r(0,0,width,360,'#233447');
@@ -22,16 +22,46 @@ function drawScene(ctx,image,kind,time,player,team,cast,mobile){
   sprite(320,281,86,{back:true,backNumber:player.number??10,row:time<3?1:0,col:time<3?Math.floor(time*6)%4:0});
   r(348,292,8,7,'#efe9ce');r(350,294,3,3,'#465c4b');
  }else if(f.type==='tunnel'){
-  r(0,0,640,360,'#111f2d');r(160,35,320,240,'#233447');r(182,59,276,173,'#52626a');
-  for(let row=0;row<7;row++)for(let x=184;x<458;x+=10)r(x,79+row*8,6,3,(row+x)%3?'#6b7881':kit);
-  r(182,140,276,95,'#244939');for(let y=145;y<231;y+=14)r(182,y,276,7,'#315843');r(184,197,272,2,'#b2c4a2');
-  for(const x of [48,520]){r(x,0,72,280,'#243b3e');r(x+4,0,2,280,'#3b5151');r(x+10,51,50,5,kit);r(x+10,59,50,2,'#708875')}
-  for(const x of [166,456]){r(x,27,16,211,'#152b2a');r(x+3,30,2,208,'#41654c')}
-  r(0,276,640,84,'#243b3e');for(let y=284;y<360;y+=18)r(0,y,640,1,'#3b5151');r(164,237,312,39,'#3b5151');
-  const moving=time<3||time>6,col=moving?Math.floor(time*7)%4:0,y=277-f.exit*60,size=96-Math.round(f.exit*24);
-  sprite(238,265-f.exit*40,64,{back:true,backNumber:cast[0]?.number??6,row:moving?1:0,col,look:cast[0]?.appearance??{}});
-  sprite(408,265-f.exit*40,64,{back:true,backNumber:cast[1]?.number??8,row:moving?1:0,col:(col+2)%4,look:cast[1]?.appearance??{}});
-  sprite(320,y,size,{back:true,backNumber:player.number??10,row:moving?1:0,col});
+  const trim=team?.secondary??'#efe6d2',away=team?.opponentColor??'#b95150',awayTrim=team?.opponentSecondary??'#efe6d2',exit=f.exit;
+  r(0,0,640,360,'#101b26');
+  // Stadium layers stay on the same integer pixel grid as the player sprites.
+  r(151,36,338,204,'#1d3042');r(151,60,338,35,'#2b4154');
+  for(let row=0;row<9;row++)for(let col=0;col<42;col++){
+   const x=153+col*8+(row%2)*3,y=79+row*8;
+   r(x,y,3,2,['#52626a','#8a927f',kit,'#243b4c',away][(row*17+col*13)%5]);
+   if((col+row*3)%7===0)r(x,y+2,4,2,'#b5b6a0');
+  }
+  r(152,112,336,3,'#142533');r(152,151,336,4,'#142533');
+  r(153,155,334,10,'#182d3b');for(let x=161;x<484;x+=27){r(x,158,15,2,x%2?kit:trim);r(x+2,161,10,1,'#708875')}
+  r(151,166,338,84,'#244939');for(let y=166;y<251;y+=14)r(151,y,338,7,'#315843');
+  r(152,208,336,2,'#c1ceb0');r(318,166,2,80,'#b2c4a2');
+  for(const x of [180,424]){r(x,44,38,10,'#384c58');for(let i=0;i<4;i++){r(x+3+i*8,46,5,5,'#eadbb4');r(x+3+i*8,52,5,1,'#9ca88e')}}
+  r(0,0,640,30,'#0b1420');r(100,28,440,8,'#182934');r(135,36,370,7,'#344753');
+  for(let row=0;row<12;row++){
+   const y=40+row*19,w=132-Math.floor(row*1.3);r(0,y,w,17,row%2?'#243742':'#293d46');r(640-w,y,w,17,row%2?'#243742':'#293d46');
+   for(let x=0;x<w;x+=38){r(x+(row%2)*18,y,1,17,'#172a34');r(640-x-(row%2)*18,y,1,17,'#172a34')}
+  }
+  for(const x of [135,493]){r(x,39,12,210,'#152831');r(x+3,42,2,204,'#617068');r(x+7,43,2,202,'#344b4b')}
+  for(const x of [26,558]){const accent=x<100?trim:awayTrim;r(x,77,56,57,'#142632');r(x+3,80,50,51,x<100?kit:away);r(x+7,85,42,3,accent);r(x+20,95,16,16,accent);r(x+23,111,10,3,accent);r(x+26,98,4,10,x<100?kit:away);r(x+23,101,10,3,x<100?kit:away);r(x+12,120,32,2,'#263e47')}
+  for(const x of [92,540]){r(x,56,5,123,'#10202c');r(x+1,60,3,112,'#d8d2ad');r(x+1,176,3,2,'#8b9a86')}
+  r(0,247,640,113,'#29393d');r(145,243,350,5,'#99a894');r(0,252,640,2,'#15272e');
+  for(let row=0;row<6;row++){const y=258+row*row*3;r(0,y,640,1,'#405052')}
+  for(const x of [-110,100,320,540,750])for(let y=248;y<360;y+=3)r(320+(x-320)*(.22+.78*(y-248)/112),y,1,3,'#43534f');
+  r(160,249,7,111,kit);r(473,249,7,111,away);r(168,249,2,111,'#849386');r(470,249,2,111,'#849386');
+  const actors=[
+   {x:254,y:258,size:57,index:0,home:true,depth:28},
+   {x:378,y:258,size:57,index:2,home:false,depth:28},
+   {x:218,y:287,size:70,index:1,home:true,depth:45},
+   {x:414,y:287,size:70,index:3,home:false,depth:45},
+   {x:372,y:319,size:87,index:4,home:false,depth:64},
+   {x:282,y:319,size:87,home:true,hero:true,depth:64}
+  ];
+  actors.forEach((a,i)=>{
+   const who=a.hero?player:cast[a.index]??{},x=a.x+(320-a.x)*exit*.26,y=a.y-exit*a.depth,size=a.size-Math.round(exit*a.size*.19),stride=Math.floor(time*5.5+i*2)%6,bob=0;
+   r(x-size*.19,y+7,size*.38,3,'#17272c');
+   sprite(x,y+bob,size,{back:true,backNumber:who.number??(a.home?6+i:4+i),row:4,col:stride,kit:a.home?kit:away,look:who.appearance??{},skin:who.appearance?.skin,hair:who.appearance?.hair,hairstyle:who.appearance?.hairstyle??0,shoes:who.appearance?.boots??'#e1c181'});
+  });
+
  }else{
   r(0,0,640,256,'#111f2d');r(0,256,640,104,'#243b3e');for(let y=264;y<360;y+=16)r(0,y,640,1,'#3b5151');
   for(const x of [44,548]){r(x,24,48,230,kit);for(let i=0;i<5;i++)r(x+6+i*8,26,2,225,'#233447');r(x-4,20,56,4,'#708875')}

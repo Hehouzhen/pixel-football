@@ -13,7 +13,7 @@ export function makeMatchNews({before,after,mode,competition='league',score,oppo
   const afterRank=competition==='league'?standings(after).findIndex(r=>r.id===after.teamId)+1:null;
   const wonTitle=competition==='league'&&after.week===seasonRounds(after)&&after.awards?.champion===before.teamId;
   const cupTitle=competition==='cup'&&after.cup?.phase==='complete'&&after.cup.champion===before.teamId;
-  const firstGoal=mode==='career'&&careerBefore?.stats.goals===0&&careerAfter?.lastMatch.goals>0;
+  const firstGoal=mode==='career'&&careerBefore?.stats.goals===0&&(careerAfter?.lastMatch?.goals??0)>0;
   const careerGoals=careerAfter?.lastMatch?.goals??0;
   const hatTrick=mode==='career'&&careerGoals===3;
   const rankChange=before.week===0?`球队目前排名第 ${afterRank}。`:beforeRank&&afterRank&&beforeRank!==afterRank?`球队从第 ${beforeRank} 位来到第 ${afterRank} 位。`:`球队目前排名第 ${afterRank}。`;
@@ -30,7 +30,7 @@ export function makeMatchNews({before,after,mode,competition='league',score,oppo
   const personal=mode==='career'&&careerAfter?.lastMatch?`${careerAfter.name} 本场收获 ${careerAfter.lastMatch.goals} 球、${careerAfter.lastMatch.assists} 次助攻，评分 ${careerAfter.lastMatch.rating.toFixed(1)}。`:'';
   const table=competition==='league'?rankChange:'';
   const shotLine=stats?.shots?`双方射门 ${stats.shots[0]} : ${stats.shots[1]}，射正 ${stats.onTarget?.[0]??0} : ${stats.onTarget?.[1]??0}。`:'';
-  const scorers=goalEvents.map(e=>`${e.minute}′ ${teamName(before,e.teamId)}：${e.scorerName}${e.assistName?`（${e.assistName} 助攻）`:''}`).join('；');
+  const scorers=goalEvents.map(e=>`${e.minute}′ ${teamName(before,e.teamId)}：${e.scorerName}${e.ownGoal?'（乌龙球）':''}${e.assistName?`（${e.assistName} 助攻）`:''}`).join('；');
   return {id:`${year}:${competition}:${round}:${after.results.length}:${after.cup?.results?.length??0}`,year,round,mode,competition,source,type,team,opponent,score:[...score],shootout:shootout?.score??null,headline,lead,body:[personal,scorers&&`进球：${scorers}。`,table,shotLine].filter(Boolean).join(' '),stats:stats?{shots:[...(stats.shots??[0,0])],onTarget:[...(stats.onTarget??[0,0])],saves:[...(stats.saves??[0,0])]}:null};
 }
 

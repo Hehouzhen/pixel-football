@@ -91,14 +91,17 @@ assert.equal(LEAGUES.length,5);
 assert.equal(new Set([...LEAGUES,...LEGACY_LEAGUES].flatMap(item=>item.teams.map(team=>team.id))).size,[...LEAGUES,...LEGACY_LEAGUES].reduce((sum,item)=>sum+item.teams.length,0),'新增俱乐部 ID 不得覆盖旧联赛球队');
 for(const league of LEAGUES){assert.equal(league.teams.length,16);assert.equal(fixtures(league).length,30);assert.equal(new Set(fixtures(league).flat().map(pair=>pair.join(':'))).size,240)}
 assert.equal(fixtures(LEGACY_LEAGUES[0]).length,10);
-const league=LEAGUES[0],season=createSeason(league.id,league.teams[0].id);
-season.names[`${season.teamId}:5`]='测试球员';
+const league=LEAGUES[0],season=createSeason(league.id,league.teams[0].id),star=season.rosterIds[season.teamId][5];
+season.names[`${season.teamId}:5`]='旧位置缓存';
+season.playerData[star].name='测试球员';
 for(let i=0;i<seasonRounds(season);i++){assert(currentFixture(season));completeWeek(season,[5,0],Array.from({length:12},(_,j)=>({goals:j===5?5:0,assists:j===4?1:0})),{shots:[7,2],onTarget:[5,1],passes:[40,28],passesCompleted:[31,19],crosses:[3,2],tackles:[5,4],fouls:[1,2],yellows:[0,1],reds:[0,0],saves:[1,0]})}
 assert.equal(season.results.length,240);
 assert(standings(season).every(row=>row.played===30));
 assert.equal(currentFixture(season),undefined);
 assert.equal(standings(season)[0].id,season.teamId);
 assert.equal(leaders(season)[0].name,'测试球员');
+assert.equal(season.playerData[star].name,'测试球员');
+assert.equal(season.names[`${season.teamId}:5`],'旧位置缓存');
 assert.equal(seasonSummary(season).saves,30);
 assert.equal(season.awards.champion,season.teamId);
 assert.equal(leagueAwards(season).goldenBoot.name,'测试球员');
@@ -111,7 +114,8 @@ let played=0;while(cupNextMatch(season)){completeCupMatch(season,[2,0],Array.fro
 assert.equal(played,9);assert.equal(season.cup.phase,'complete');assert.equal(season.cup.champion,season.teamId);assert.equal(season.cup.results.length,53);
 const playedCupResult=season.cup.results.find(result=>result.source==='played');assert(playedCupResult.matchId&&playedCupResult.seasonId);assert.equal(playedCupResult.playerStats.length,12);assert.deepEqual(playedCupResult.lineups.find(line=>line.teamId===season.teamId).playerIds,season.rosterIds[season.teamId]);
 for(const teamId of season.cup.teams){const goals=season.cup.results.reduce((sum,result)=>sum+(result.home===teamId?result.score[0]:result.away===teamId?result.score[1]:0),0),playerGoals=Object.entries(season.cup.players).filter(([id])=>season.playerData[id]?.teamId===teamId).reduce((sum,[,stats])=>sum+(stats.goals??0),0);assert.equal(playerGoals,goals,`${teamId} 欧冠进球应与球队比分一致`)}
-assert.equal(season.cup.names[`${season.teamId}:5`],'测试球员');
+assert.equal(season.cup.playerData[star].name,'测试球员');
+assert.equal(season.cup.names[`${season.teamId}:5`],'旧位置缓存');
 const aggregateCup=createSeason('england','arsenal',91),cupTeams=LEAGUES.flatMap(item=>item.teams.slice(0,4).map(team=>team.id));aggregateCup.cup={formatVersion:2,phase:'quarterfinal',round:0,teams:cupTeams,quarters:[[[...['arsenal','mancity']],['liverpool','chelsea'],['manutd','tottenham'],['newcastle','astonvilla']],[['mancity','arsenal'],['chelsea','liverpool'],['tottenham','manutd'],['astonvilla','newcastle']]],results:[],players:{},rosterIds:aggregateCup.rosterIds,playerData:aggregateCup.playerData,names:{},semis:null,final:null};assert.equal(cupNeedsShootout(aggregateCup,[0,0]),false,'八强首回合平局不应直接点球');completeCupMatch(aggregateCup,[1,0],Array.from({length:12},()=>({})),null);assert.equal(aggregateCup.cup.round,1);assert.equal(cupNeedsShootout(aggregateCup,[0,1]),true,'两回合总比分平局应点球');assert.equal(cupNeedsShootout(aggregateCup,[1,0]),false,'总比分领先不应点球');
 const storage={values:new Map(),getItem(k){return this.values.get(k)??null},setItem(k,v){this.values.set(k,v)}};
 saveSaveData({version:2,active:0,slots:[makeClubSlot(season),null,null]},storage);assert.equal(loadSaveData(storage).slots[0].season.cup.champion,season.teamId);
@@ -201,7 +205,7 @@ m=match();m.kick(5,true,.8,{x:FIELD.right,y:FIELD.center-FIELD.goalHalf+2});m.st
 try{Math.random=()=>0;m=match();m.players[5].x=400;m.players[5].y=FIELD.center;m.players[5].dx=1;m.players[11].x=420;m.players[11].y=FIELD.center;m.ball.owner=5;m.players[5].settle=.18;assert(m.attemptTackle(11),'receiving a pass does not grant invulnerability during first-touch adjustment');assert.equal(m.ball.owner,11);assert.equal(m.stats[11].tackleAttempts,1);assert(!m.attemptTackle(11),'a player cannot tackle their own newly won possession');
  m=match();m.players[5].x=400;m.players[5].y=FIELD.center;m.players[11].x=442;m.players[11].y=FIELD.center;m.players[11].dx=-1;m.players[11].settle=0;m.ball.owner=11;assert(m.tackle(0,true),'sprinting slide tackle must extend the manual tackle reach');assert.equal(m.ball.owner,5);
 m=match();m.players.forEach(p=>p.cool=10);m.players[11].cool=0;m.players[11].x=420;m.players[11].y=FIELD.center;m.players[5].x=400;m.players[5].y=FIELD.center;m.players[5].dx=-1;m.ball.owner=5;m.ball.x=389;m.ball.y=FIELD.center;m.kickoffGrace=0;m.step(.016);assert.equal(m.ball.owner,5);assert(m.players[11].tackleWindup>0,'AI must prepare rather than instantly steal');
-m=match();m.players[5].x=400;m.players[5].y=FIELD.center;m.players[5].dx=1;m.players[11].x=395;m.players[11].y=FIELD.center;m.ball.owner=5;Math.random=()=>.6;assert.equal(m.attemptTackle(11),false,'shielded side reduces success');m.players[11].cool=0;m.players[11].x=405;Math.random=()=>.4;assert.equal(m.attemptTackle(11),true,'exposed side rewards positioning');
+m=match();m.players[5].x=400;m.players[5].y=FIELD.center;m.players[5].dx=1;m.players[11].x=395;m.players[11].y=FIELD.center;m.ball.owner=5;Math.random=()=>.6;assert.equal(m.attemptTackle(11),false,'shielded side reduces success');m.players[11].cool=0;m.players[11].tackleRecovery=0;m.players[11].x=405;Math.random=()=>.4;assert.equal(m.attemptTackle(11),true,'exposed side rewards positioning');
 assert(tackleSuccessChance(80,40) > tackleSuccessChance(40,80),'defense must beat shielding more often');
 m=match();m.players.forEach((p,id)=>{if(id!==5&&id!==11)p.cool=10});m.selected[0]=5;m.players[5].x=393;m.players[5].y=FIELD.center;m.players[11].x=420;m.players[11].y=FIELD.center;m.players[11].dx=-1;m.players[11].settle=0;m.ball.owner=11;Math.random=()=>0;m.step(.016,[{x:1},{}]);assert.equal(m.ball.owner,5,'moving into a frontal challenge should automatically win the ball');assert.equal(m.stats[5].tackles,1);
 m=match();m.players.forEach((p,id)=>{if(id!==5&&id!==11)p.cool=10});m.selected[0]=5;m.players[5].x=447;m.players[5].y=FIELD.center;m.players[11].x=420;m.players[11].y=FIELD.center;m.players[11].dx=-1;m.players[11].settle=0;m.ball.owner=11;m.step(.016,[{x:-1},{}]);assert.equal(m.stats[5].tackleAttempts,0,'approaching from behind should not auto-tackle');assert.equal(m.fouls[0],0);

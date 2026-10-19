@@ -1,5 +1,5 @@
 import {ensureFootballLife,squadPlayers} from './football-life.mjs';
-import {generateProspect} from './identity.mjs';
+import {generateProspect,updatePlayerProfile} from './identity.mjs';
 import {LEAGUES,getTeam,leagueAwards,playerRows} from './league.mjs';
 import {teamName} from './identity.mjs';
 import {ABILITIES,ABILITY_LABELS,ensureRatings,positionRating} from './ratings.mjs';
@@ -35,11 +35,12 @@ export function editPlayer(season,career,id,change){assertGod(season);const next
   const oldTeam=p.teamId,oldPosition=p.position,oldSlot=next.rosterIds[p.teamId].indexOf(id),targetId=next.rosterIds[teamId][position];
   if(updatedCareer?.id===targetId&&id!==targetId)throw new Error('目标位置是 MyCareer 球员；请直接编辑自建球员的位置');
   if(targetId!==id&&(oldSlot>=0||oldTeam!==teamId||oldPosition!==position)){const other=next.playerData[targetId],oldNumber=p.number;if(oldSlot>=0)next.rosterIds[oldTeam][oldSlot]=targetId;else next.squadIds[oldTeam]=next.squadIds[oldTeam].map(other=>other===id?targetId:other);next.rosterIds[teamId][position]=id;other.teamId=oldTeam;other.position=oldPosition;if(oldTeam===teamId&&number===other.number)other.number=oldNumber;else if(next.rosterIds[oldTeam].some(otherId=>otherId!==targetId&&next.playerData[otherId].number===other.number)){other.number=Array.from({length:99},(_,i)=>i+1).find(n=>!next.rosterIds[oldTeam].some(otherId=>otherId!==targetId&&next.playerData[otherId].number===n))}}
-  p.name=name;p.number=number;p.teamId=teamId;p.position=position;p.attributes=attributes;p.age=age;p.potential=potential;p.traits=[...traits];
+  p.teamId=teamId;p.position=position;p.traits=[...traits];
+  updatePlayerProfile(next,id,{name,number,age,potential,attributes},{career:updatedCareer});
   if(oldTeam!==teamId){const from=seasonState(next,teamLeague(oldTeam)),to=seasonState(next,teamLeague(teamId));if(from!==to){const original=from.players[id],swapped=to.players[targetId];delete from.players[id];delete to.players[targetId];if(original)to.players[id]=original;if(swapped)from.players[targetId]=swapped}}
   checkNumber(next,teamId,id,number);if(targetId!==id)checkNumber(next,oldTeam,targetId,next.playerData[targetId].number);
   for(const state of [next,...Object.values(next.world??{}),next.cup].filter(Boolean)){delete state.names?.[`${oldTeam}:${oldPosition}`];delete state.names?.[`${teamId}:${position}`]}
-  if(updatedCareer?.id===id){updatedCareer.name=name;updatedCareer.number=number;updatedCareer.age=age;updatedCareer.potential=potential;updatedCareer.attributes={...attributes};updatedCareer.index=position;updatedCareer.position=position===1?'defender':position===3?'midfielder':'forward';if(teamId!==oldTeam)next.teamId=teamId}
+  if(updatedCareer?.id===id){updatedCareer.index=position;updatedCareer.position=position===1?'defender':position===3?'midfielder':'forward';if(teamId!==oldTeam)next.teamId=teamId}
   syncIdentity(next);log(next,'player',`${id} · ${p.name} · ${teamName(next,teamId)}`);return {season:next,career:updatedCareer};
 }
 

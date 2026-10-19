@@ -1,4 +1,7 @@
 import {LEAGUES,playerRows,getTeam} from './league.mjs';
+import {archiveSettlements} from './match-ledger.mjs';
+import {teamName} from './identity.mjs';
+import {internationalTeam} from './national-countries.mjs';
 
 export function archiveSeason(season){
   const seasonStartYear=season.calendar?.startYear??2026+(season.history?.length??0),existing=season.history?.find(row=>row.archive?.seasonStartYear===seasonStartYear),number=existing?.archive?.number??(season.history?.length??0)+1;
@@ -8,7 +11,7 @@ export function archiveSeason(season){
     players:playerRows(state).map(row=>({...row,name:state.playerData?.[row.id]?.name??row.name,seasonTeamId:row.teamId,age:state.playerData?.[row.id]?.age,potential:state.playerData?.[row.id]?.potential,retired:!!state.playerData?.[row.id]?.retired,retiredYear:state.playerData?.[row.id]?.retiredYear,freeAgent:!!state.playerData?.[row.id]?.freeAgent,honors:[...(state.playerData?.[row.id]?.honors??[])],awardHistory:structuredClone(state.playerData?.[row.id]?.awardHistory??[]),transferHistory:structuredClone(state.playerData?.[row.id]?.transferHistory??[]),careerStats:state.playerData?.[row.id]?.careerStats?{...state.playerData[row.id].careerStats}:undefined,bestPerformance:state.playerData?.[row.id]?.bestPerformance?{...state.playerData[row.id].bestPerformance}:undefined,attributes:state.playerData?.[row.id]?.attributes?{...state.playerData[row.id].attributes}:undefined})),...(leagueId===season.leagueId?{}:{matches:structuredClone(state.results??[])})
   }));
   const currentSeason=number,careerTransfers=Object.values(season.playerData??{}).flatMap(player=>(player.transferHistory??[]).filter(row=>row.season===currentSeason)),uniqueTransfers=[...new Map(careerTransfers.map(row=>[row.eventId,row])).values()];
-  return {lifeEvents:structuredClone((season.lifeEvents??[]).filter(row=>row.year===seasonStartYear)),financeLedger:structuredClone(season.financeLedger??[]),number,revision:(existing?.archive?.revision??0)+1,seasonStartYear,teamId:season.teamId,leagueId:season.leagueId,week:season.week,leagues,retirements:structuredClone(season.retirements??[]),freeAgents:structuredClone((season.freeAgents??[]).map(id=>{const player=season.playerData?.[id];return player?{id,name:player.name,teamId:player.teamId,age:player.age}:null}).filter(Boolean)),careerTransfers:structuredClone(uniqueTransfers),awardHistory:structuredClone(season.awardHistory??[]),cup:season.cup?{players:playerRows(season.cup).map(row=>({...row,seasonTeamId:row.teamId,age:season.playerData?.[row.id]?.age,potential:season.playerData?.[row.id]?.potential,honors:[...(season.playerData?.[row.id]?.honors??[])],awardHistory:structuredClone(season.playerData?.[row.id]?.awardHistory??[]),transferHistory:structuredClone(season.playerData?.[row.id]?.transferHistory??[])})),results:structuredClone(season.cup.results??[])}:null,results:structuredClone(season.results??[]),champion:(season.awards?.champion??null),cupChampion:season.cup?.champion??null,awards:structuredClone(season.awards??null),cupAwards:structuredClone(season.cup?.awards??null)};
+  return {lifeEvents:structuredClone((season.lifeEvents??[]).filter(row=>row.year===seasonStartYear)),financeLedger:structuredClone(season.financeLedger??[]),number,revision:(existing?.archive?.revision??0)+1,seasonStartYear,teamId:season.teamId,leagueId:season.leagueId,week:season.week,leagues,matchSettlements:archiveSettlements(season),retirements:structuredClone(season.retirements??[]),freeAgents:structuredClone((season.freeAgents??[]).map(id=>{const player=season.playerData?.[id];return player?{id,name:player.name,teamId:player.teamId,age:player.age}:null}).filter(Boolean)),careerTransfers:structuredClone(uniqueTransfers),awardHistory:structuredClone(season.awardHistory??[]),cup:season.cup?{players:playerRows(season.cup).map(row=>({...row,seasonTeamId:row.teamId,age:season.playerData?.[row.id]?.age,potential:season.playerData?.[row.id]?.potential,honors:[...(season.playerData?.[row.id]?.honors??[])],awardHistory:structuredClone(season.playerData?.[row.id]?.awardHistory??[]),transferHistory:structuredClone(season.playerData?.[row.id]?.transferHistory??[])})),results:structuredClone(season.cup.results??[])}:null,results:structuredClone(season.results??[]),champion:(season.awards?.champion??null),cupChampion:season.cup?.champion??null,awards:structuredClone(season.awards??null),cupAwards:structuredClone(season.cup?.awards??null)};
 }
 
 export function upsertSeasonHistory(history,row){
@@ -107,8 +110,87 @@ export function playerCareerDossier(history,id){
   return {id,...latest,totals,seasons,matches,awards:[...awards.values()].sort((a,b)=>(a.year??0)-(b.year??0)||(a.season??0)-(b.season??0)),transfers:[...transfers.values()].sort((a,b)=>a.year-b.year),bestPerformance:latest?.bestPerformance??bestPerformance,retirement};
 }
 
-function contributionScore(player){
-  const i=player.index??5,g=player.goals??0,a=player.assists??0,t=player.tackles??0,x=player.interceptions??0,s=player.saves??0;
+const LEDGER_FIELDS=['appearances','goals','assists','tackles','interceptions','saves','shots','passesCompleted','keyPasses','shotsOnTarget','headers','playingSeconds'];
+const emptyLedger=()=>Object.fromEntries(LEDGER_FIELDS.map(field=>[field,0]));
+// MATCH-LEDGER-01: one read-only query for a player's current and archived club
+// record, national record and youth record. Every match keeps the team that player
+// actually represented (row.teamId), never the player's current club. Missing detail
+// stays unknown instead of becoming zero.
+export function playerCareerLedger(season,playerId,career=null){
+  const player=season?.playerData?.[playerId],careerPlayer=career?.id===playerId?career:null;
+  const nationalCareer=careerPlayer?.nationalCareer??player?.nationalCareer??null,journey=careerPlayer?.journey??player?.journey??null,dossier=playerCareerDossier(season?.history??[],playerId);
+  const currentSeason=(season?.history?.length??0)+1,currentYear=season?.calendar?.startYear??2026+(season?.history?.length??0);
+  const matches=[],seen=new Set(),ownGoalCounts=new Map();
+  const noteOwnGoals=result=>{const id=result.matchId;if(!id)return;for(const event of result.goalEvents??[])if(event.ownGoal===true&&(event.scorerId===playerId||event.actorId===playerId))ownGoalCounts.set(id,(ownGoalCounts.get(id)??0)+1)};
+  const push=match=>{
+    const key=match.matchId??`${match.season??'?'}:${match.competition}:${match.teamId}:${match.opponent}:${match.date??match.week??match.round??''}`;
+    if(seen.has(key))return;seen.add(key);matches.push({...match,ownGoals:match.competition==='youth'?0:ownGoalCounts.get(match.matchId)??0});
+  };
+  const playerLine=row=>{
+    const minutes=row?.minutesPlayed??(row?.playingSeconds&&row?.duration?Math.round(row.playingSeconds/row.duration*90):row?.playingSeconds>0?Math.round(row.playingSeconds/180*90):0);
+    const played=minutes>0||(row?.started!==false&&(row?.minuteOff??0)>0||(row?.playingSeconds??0)>0);
+    const line={played,minutes,started:row?.started!==false,rating:row?.rating??null};
+    for(const field of LEDGER_FIELDS)line[field]=row?.[field]===undefined?null:row[field];
+    line.minutesPlayed=minutes;
+    line.playingSeconds=typeof row?.playingSeconds==='number'?row.playingSeconds:(minutes>0?Math.round(minutes/90*180):0);
+    line.goals=row?.goals??0;line.assists=row?.assists??0;line.reds=row?.reds??0;
+    return line;
+  };
+  const matchFromResult=(result,{seasonNumber,year,competition,leagueId=null,league=null})=>{
+    const row=result.playerStats?.find(item=>item.playerId===playerId);if(!row||!Array.isArray(result.score))return null;
+    noteOwnGoals(result);
+    const home=result.home===row.teamId,opponentId=home?result.away:result.home,playerScore=home?[...result.score]:[result.score[1],result.score[0]];
+    const line=playerLine({...row,playingSeconds:row.playingSeconds??(result.duration?Math.round((row.minutesPlayed??0)/90*result.duration):0)});
+    return {matchId:result.matchId??null,season:seasonNumber,year,competition,leagueId,league,phase:result.phase??null,round:result.round??null,week:result.week??null,date:result.date??null,source:result.source??null,home:result.home,away:result.away,homeName:result.homeName??teamName(season,result.home)??getTeam(result.home)?.name??result.home,awayName:result.awayName??teamName(season,result.away)??getTeam(result.away)?.name??result.away,score:[...result.score],playerScore,teamId:row.teamId,teamName:teamName(season,row.teamId)??row.teamName??row.teamId,opponentId,opponent:teamName(season,opponentId)??result[home?'awayName':'homeName'],...line,detail:true,hasReport:!!result.report,report:result.report??null,penalties:Array.isArray(result.penalties)?[...result.penalties]:null};
+  };
+  // Archived seasons (also the source for players no longer in the current squad).
+  for(const entry of season?.history??[]){const archive=entry.archive;if(!archive)continue;
+    for(const group of archive.leagues??[])for(const result of group.matches??(group.leagueId===archive.leagueId?archive.results??[]:[])){const match=matchFromResult(result,{seasonNumber:archive.number??null,year:archive.seasonStartYear??null,competition:'league',leagueId:group.leagueId,league:group.league});if(match)push(match)}
+    if(archive.cup)for(const result of archive.cup.results??[]){const match=matchFromResult(result,{seasonNumber:archive.number??null,year:archive.seasonStartYear??null,competition:'cup',league:'欧洲冠军杯'});if(match)push(match)};
+  }
+  // Current season club records: own league plus every world league, then the cup.
+  const currentStates=[[season,'league',season?.leagueId],...Object.entries(season?.world??{}).map(([id])=>[season.world[id],'league',id])];
+  for(const [state,competition,leagueId] of currentStates)for(const result of state?.results??[]){const match=matchFromResult(result,{seasonNumber:currentSeason,year:currentYear,competition,leagueId,league:LEAGUES.find(item=>item.id===leagueId)?.name??leagueId});if(match)push(match)}
+  for(const result of season?.cup?.results??[]){const match=matchFromResult(result,{seasonNumber:currentSeason,year:currentYear,competition:'cup',league:'欧洲冠军杯'});if(match)push(match)}
+  // National record: own goals never enter club totals; shootouts stay separate.
+  const nationId=careerPlayer?.international?.nationId??player?.international?.nationId??null,nationName=nationId?internationalTeam(nationId)?.name??'国家队':null;
+  for(const row of nationalCareer?.history??[]){
+    const year=Number.isInteger(row.year)?row.year:currentYear;
+    push({matchId:`national:${row.id}`,season:null,year,competition:'national',national:true,leagueId:null,league:row.competition??'国家队',phase:row.stage??null,date:row.date??null,teamId:nationId,teamName:nationName,opponent:row.opponent??'对手',playerScore:Array.isArray(row.score)?[...row.score]:null,score:null,started:row.started!==false,minutes:row.minutes??0,goals:row.goals??0,assists:row.assists??0,rating:row.rating??null,reds:0,detail:true,hasReport:!!row.report,report:row.report??null,penalties:Array.isArray(row.penalties)?[...row.penalties]:null,windowId:row.windowId??null});
+  }
+  // Youth record: friendly/assessment matches, never professional totals.
+  for(const [index,row] of (journey?.youthResults??[]).entries())push({matchId:`youth:${playerId}:${index}`,season:null,year:null,competition:'youth',youth:true,leagueId:null,league:'青训',teamId:journey.homeTeamId??null,teamName:teamName(season,journey.homeTeamId??season?.teamId),opponent:row.opponent,playerScore:Array.isArray(row.score)?[...row.score]:null,started:true,minutes:null,goals:row.goals??0,assists:row.assists??0,rating:row.rating??null,reds:0,detail:true,hasReport:!!row.report,report:row.report??null});
+  const sortKey=match=>`${String(match.year??0).padStart(4,'0')}:${String(match.date??'').padStart(10,'0')}:${String(match.week??0).padStart(3,'0')}:${match.matchId??''}`;
+  matches.sort((a,b)=>sortKey(a).localeCompare(sortKey(b)));
+  const sum=(rows,fields=LEDGER_FIELDS)=>rows.reduce((total,row)=>{for(const field of fields){if(field==='appearances')total.appearances+=(row.detail!==false&&row.played!==false?1:0);else if(typeof row[field]==='number')total[field]=(total[field]??0)+row[field]}return total},{...emptyLedger()});
+  const clubMatches=matches.filter(match=>!match.national&&!match.youth),nationalMatches=matches.filter(match=>match.national),youthMatches=matches.filter(match=>match.youth);
+  const totals=sum(clubMatches),nationalTotals=sum(nationalMatches),youthTotals=sum(youthMatches);
+  const careerTotals=player?.careerStats??dossier.latest?.careerStats??null;
+  const baseline=careerTotals?Object.fromEntries(LEDGER_FIELDS.map(field=>[field,Math.max(0,(careerTotals[field]??0)-(totals[field]??0))])):null;
+  const incomplete=baseline?LEDGER_FIELDS.filter(field=>(baseline[field]??0)>0):LEDGER_FIELDS.slice();
+  // Season -> club segments (a mid-season transfer keeps both teams) plus national/youth.
+  const seasonMap=new Map();
+  const seasonFor=match=>{
+    const key=`${match.year??'unknown'}:${match.season??'national'}`;
+    if(!seasonMap.has(key))seasonMap.set(key,{season:match.season??null,year:match.year??null,label:match.season?`${match.year??''}/${String((match.year??0)+1).slice(-2)}`:match.year?String(match.year):'青训与国家队',club:[],national:[],youth:[],totals:emptyLedger(),nationalTotals:emptyLedger(),youthTotals:emptyLedger()});
+    return seasonMap.get(key);
+  };
+  const segment=(bucket,match,teamId,label)=>{let row=bucket.find(item=>item.teamId===teamId);if(!row){row={teamId,team:label,matches:[],totals:emptyLedger(),firstDate:match.date??null,lastDate:match.date??null};bucket.push(row)}row.matches.push(match);row.lastDate=match.date??row.lastDate;row.totals=sum(row.matches);return row};
+  for(const match of matches){
+    const group=seasonFor(match);
+    if(match.national)segment(group.national,match,match.teamId??nationId,match.teamName??nationName??'国家队');
+    else if(match.youth)segment(group.youth,match,match.teamId??'youth','青训');
+    else segment(group.club,match,match.teamId,match.teamName);
+  }
+  for(const group of seasonMap.values()){group.club.sort((a,b)=>String(a.firstDate??'').localeCompare(String(b.firstDate??''))||a.team.localeCompare(b.team));group.totals=sum(group.club.flatMap(row=>row.matches));group.nationalTotals=sum(group.national.flatMap(row=>row.matches));group.youthTotals=sum(group.youth.flatMap(row=>row.matches))}
+  const seasons=[...seasonMap.values()].sort((a,b)=>String(b.year??0).localeCompare(String(a.year??0))||String(b.season??0).localeCompare(String(a.season??0)));
+  const transferMap=new Map();
+  for(const transfer of [...(dossier.transfers??[]),...(careerPlayer?.transferHistory??[]),...(player?.transferHistory??[]),...(season?.playerData?.[playerId]?.transferHistory??[])])transferMap.set(transfer.eventId??`${transfer.year}:${transfer.from}:${transfer.to}`,transfer);
+  const transfers=[...transferMap.values()].sort((a,b)=>(a.year??0)-(b.year??0));
+  return {id:playerId,name:careerPlayer?.name??player?.name??dossier.name??playerId,teamId:player?.teamId??careerPlayer?.teamId??dossier.teamId??null,team:player?.teamId?teamName(season,player.teamId):careerPlayer?.teamId?teamName(season,careerPlayer.teamId):dossier.team??null,retired:!!player?.retired||!!dossier.retirement,retirement:dossier.retirement??null,currentSeason,currentYear,totals,careerTotals,baseline,incomplete,nationalTotals,youthTotals,matches,seasons,transfers,nationalTeamId:nationId,nationalTeam:nationName};
+}
+
+function contributionScore(player){  const i=player.index??5,g=player.goals??0,a=player.assists??0,t=player.tackles??0,x=player.interceptions??0,s=player.saves??0;
   if(i===0)return +(s*.45+(player.appearances??0)*.2+g*5+a*2).toFixed(1);
   if(i<=2)return +(g*4+a*3+t*.45+x*.5+(player.blocks??0)*.6).toFixed(1);
   if(i<=4)return +(g*4+a*3.5+t*.35+x*.4+(player.keyPasses??0)*.5).toFixed(1);

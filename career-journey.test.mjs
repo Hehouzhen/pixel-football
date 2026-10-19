@@ -4,13 +4,30 @@ import {createCareerPlayer,finishCareerMatch,careerTransferOffers} from './caree
 import {createSeason,prepareSeason,completeWeek} from './league.mjs';
 import {carryIdentity} from './identity.mjs';
 import {Match} from './engine.mjs';
+import {startCup} from './cup.mjs';
+import {simulateNextScheduled} from './long-simulation.mjs';
 import {nextCalendarFixture} from './calendar.mjs';
 import {makeCareerSlot,exportBackup,importBackup} from './save-slots.mjs';
 import {initializeJourney,createYouthMatch,finishYouthMatch,firstContractOffers,signFirstContract,journeyOpportunity,prepareJourneyLineup,enterJourneyMatch,journeyPlayerLines,finishJourneyMatch,chooseJourneyEvent,trainJourney} from './career-journey.mjs';
 function youth(position='midfielder'){return initializeJourney(createCareerPlayer('林川',27,position),createSeason('england','arsenal',41),'expression')}
 function graduated(position='midfielder'){let {season:s,player:p}=youth(position);for(let i=0;i<4;i++){const m=createYouthMatch(p,s,0,120);m.stats[p.index].playingSeconds=120;p=finishYouthMatch(p,m)}return {season:s,player:p}}
 function professional(position='midfielder'){const {season,player}=graduated(position);return signFirstContract(player,season,firstContractOffers(player,season)[0].teamId)}
-function live(p,s){const o=journeyOpportunity(p,s);prepareJourneyLineup(s,p,o);const event=nextCalendarFixture(s),other=event.pair.find(id=>id!==s.teamId),ids=[...s.rosterIds[s.teamId],...s.rosterIds[other]],m=new Match({duration:120,careerIndex:p.index,playerIds:ids,playerAttributes:ids.map(id=>s.playerData[id].attributes),playerNumbers:ids.map(id=>s.playerData[id].number)});enterJourneyMatch(m,p,s,o);return m}
+function live(p,s){const o=journeyOpportunity(p,s);prepareJourneyLineup(s,p,o);const event=nextCalendarFixture(s),other=event.pair.find(id=>id!==s.teamId),ids=[...s.rosterIds[s.teamId],...s.rosterIds[other]],m=new Match({duration:120,careerIndex:p.index,playerIds:ids,playerAttributes:ids.map(id=>s.playerData[id].attributes),playerLooks:ids.map(id=>structuredClone(s.playerData[id].appearance??{})),playerNumbers:ids.map(id=>s.playerData[id].number)});enterJourneyMatch(m,p,s,o);return m}
+test('主角为唯一前锋时改首发，长期模拟记录一次出场且不改身份',()=>{
+ const {season:s,player:p}=professional('forward');startCup(s);const group=i=>i===0?0:i<3?1:i<5?3:5;
+ const ids=s.squadIds[s.teamId].filter(id=>id===p.id||group(s.playerData[id].position)!==5);s.squadIds[s.teamId]=ids;s.rosterIds[s.teamId][p.index]=p.id;
+ const before=structuredClone(s),o=journeyOpportunity(p,s);assert.equal(o.starter,true);assert.match(o.reason,/人手不足/);o.starter=false;o.minuteOn=60;prepareJourneyLineup(s,p,o);assert.equal(o.starter,true);assert.equal(o.minuteOn,0);assert.match(o.reason,/人手不足/);assert.equal(s.rosterIds[s.teamId][p.index],p.id);
+ const result=simulateNextScheduled(s,p,{duration:120});assert.equal(result.season.week,s.week+1);assert.equal(result.career.stats.appearances,1);assert.equal(result.career.journey.clubGames,1);assert.equal(result.career.history.length,1);assert.equal(result.career.id,p.id);assert.deepEqual(result.career.appearance,p.appearance);assert.deepEqual(Object.keys(result.season.playerData).sort(),Object.keys(before.playerData).sort());
+ const row=result.season.results.find(r=>[r.home,r.away].includes(s.teamId)).playerStats.find(r=>r.playerId===p.id);assert.equal(row.started,true);assert(row.minutesPlayed>0);
+});
+test('排阵合并首发与注册名单，忽略无效和其他球队球员',()=>{
+ const {season:s,player:p}=professional();const keeper=s.rosterIds[s.teamId][0];s.squadIds[s.teamId]=s.squadIds[s.teamId].filter(id=>s.playerData[id].position!==0);s.squadIds[s.teamId].push('missing-id',s.rosterIds.arsenal[0],keeper,keeper);
+ const o=journeyOpportunity(p,s);prepareJourneyLineup(s,p,o);assert.equal(new Set(s.rosterIds[s.teamId]).size,6);assert(s.rosterIds[s.teamId].every(id=>s.playerData[id].teamId===s.teamId));assert.equal(o.starter,false);
+});
+test('确实缺门将时报告具体缺口，排阵和主角安排不被部分写入',()=>{
+ const {season:s,player:p}=professional();for(const id of [...s.squadIds[s.teamId]])if(s.playerData[id].position===0)s.playerData[id].retired=true;
+ const lineup=structuredClone(s.rosterIds[s.teamId]),o=journeyOpportunity(p,s),before=structuredClone(o);assert.throws(()=>prepareJourneyLineup(s,p,o),/缺少可用门将/);assert.deepEqual(s.rosterIds[s.teamId],lineup);assert.deepEqual(o,before);
+});
 test('青训新人有独立身份，原球员与首发阵容没有被覆盖',()=>{const original=createSeason('england','arsenal',41);prepareSeason(original);const before=structuredClone(original.rosterIds.arsenal),names=before.map(id=>original.playerData[id].name),{season:s,player:p}=initializeJourney(createCareerPlayer('林川',27,'midfielder'),original);assert(!before.includes(p.id));assert.deepEqual(s.rosterIds.arsenal,before);assert.deepEqual(before.map(id=>s.playerData[id].name),names);assert.equal(p.age,17);assert.equal(p.journey.stage,'academy')});
 test('四场评估后普通表现也有职业合同，青年赛不占用联赛和职业统计',()=>{const {season:s,player:p}=graduated();assert.equal(p.journey.stage,'contract');assert.equal(p.journey.youthResults.length,4);assert.equal(s.week,0);assert.equal(p.stats.appearances,0);const offers=firstContractOffers(p,s);assert.equal(offers.length,3);assert(offers.every(o=>o.strength<=1.02));assert.equal(new Set(offers.map(o=>o.teamId)).size,3)});
 test('试训选择真实改变下一场对手，专项准备不可重复刷',()=>{let {season:s,player:p}=youth();p=chooseJourneyEvent(p,s,'team');for(let i=0;i<2;i++){const m=createYouthMatch(p,s);p=finishYouthMatch(p,m);if(p.journey.pending==='pressure')p=chooseJourneyEvent(p,s,'quick')}const standard=createYouthMatch(p,s);p=chooseJourneyEvent(p,s,'trial');const trial=createYouthMatch(p,s);assert(trial.playerAttributes[8].strength>standard.playerAttributes[8].strength);assert.match(trial.teams[1],/一线队/);const old=p.attributes.firstTouch;p=trainJourney(p,'firstTouch');assert.equal(p.attributes.firstTouch,old+1);assert.deepEqual(trainJourney(p,'firstTouch'),p)});
@@ -25,3 +42,5 @@ test('替补前已经传出的球与后续助攻，仍归属于原先的球员',
   const completed=out.stats.passesCompleted;m.takeBall(receiver);assert.equal(out.stats.passesCompleted,completed+1);assert.equal(m.stats[slot].passesCompleted,0);
   m.kick(receiver,true,.5,{x:998,y:308});const assists=out.stats.assists;m.goal(0);assert.equal(out.stats.assists,assists+1);assert.equal(m.stats[slot].assists,0);
 });
+
+test('替补登场将原先发外观更换为本人已保存形象，半场重置不变',()=>{const {season:s,player:p}=professional();p.appearance={skin:'#9d704e',hair:'#d6d6ce',hairstyle:3};const m=live(p,s);assert(m.substitutedOut);assert.deepEqual(m.playerLooks[m.careerIndex],p.appearance);assert.deepEqual(m.careerLook,p.appearance);assert.notStrictEqual(m.playerLooks[m.careerIndex],p.appearance);assert.notStrictEqual(m.careerLook,p.appearance);m.reset(0);assert.deepEqual(m.playerLooks[m.careerIndex],p.appearance);assert.deepEqual(m.careerLook,p.appearance);});

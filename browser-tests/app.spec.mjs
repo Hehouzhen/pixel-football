@@ -13,6 +13,8 @@ import {cashOffers,cashInboundOffers,inboundOffers} from '../transfers.mjs';
 import {squadPlayers} from '../football-life.mjs';
 import {teamName} from '../identity.mjs';
 import {expandMatchJournal} from '../save-slots.mjs';
+import {professionalFixture} from '../test-fixtures/identity-worlds.mjs';
+import {simulateNextScheduled} from '../long-simulation.mjs';
 
 async function readIndexedSaveRecord(page){return page.evaluate(({database,store})=>new Promise((resolve,reject)=>{const opening=indexedDB.open(database);opening.onerror=()=>reject(opening.error);opening.onsuccess=()=>{const db=opening.result;let value=null;const transaction=db.transaction(store,'readonly'),request=transaction.objectStore(store).get('slots');request.onsuccess=()=>value=request.result??null;transaction.oncomplete=()=>{db.close();resolve(value)};transaction.onerror=()=>{db.close();reject(transaction.error)}}}),{database:SAVE_DB_NAME,store:SAVE_DB_STORE})}
 async function readIndexedSave(page){const record=await readIndexedSaveRecord(page),data=record?.save??record;for(const slot of data?.slots??[])for(const state of [slot?.season,...Object.values(slot?.season?.world??{}),slot?.season?.cup])for(const result of state?.results??[])expandMatchJournal(result);return data}
@@ -514,4 +516,21 @@ test('长期模拟逐场保存、可停止并保留轮换计划',async({page})=>
  await panel.getByLabel('长期模拟目标').selectOption('10');await panel.getByRole('button',{name:'开始长期模拟'}).click();await page.getByRole('button',{name:'停止长期模拟'}).click();await expect(page.getByRole('dialog',{name:'长期模拟进行中'})).toHaveCount(0);await expect(panel.getByRole('status')).toContainText('已按你的要求停止');
  await page.setViewportSize({width:390,height:844});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBe(true);await page.screenshot({path:'test-results/season-preparation-mobile.png',fullPage:true});
  await page.reload();await page.getByRole('button',{name:/继续俱乐部/}).click();expect((await readIndexedSave(page)).slots[0].season.week).toBeGreaterThanOrEqual(season.week);expect(errors).toEqual([]);
+});
+test('MyCareer 顶部长期模拟入口逐场保存并可停止',async({page})=>{
+ const {season,player}=professionalFixture(),storage={value:null,setItem(key,value){this.value=value}};
+ saveSaveData({version:2,active:0,slots:[makeCareerSlot(season,player),null,null]},storage);
+ await page.addInitScript(({key,value})=>localStorage.setItem(key,value),{key:SAVE_KEY,value:storage.value});await page.goto('/');await page.getByRole('button',{name:/继续生涯/}).click();
+ const shortcut=page.getByRole('region',{name:'生涯长期模拟'});await expect(shortcut.getByRole('button',{name:/长期模拟/})).toBeVisible();await expect(page.getByRole('region',{name:'赛程与长期模拟'})).toBeVisible();
+ await shortcut.getByRole('button',{name:/长期模拟/}).click();await expect(page.getByRole('region',{name:'赛程与长期模拟'}).getByRole('status')).toContainText(/已完成 [1-9]\d* 场|已模拟 [1-9]\d* 场/,{timeout:60000});
+ if(await page.getByRole('dialog',{name:'长期模拟进行中'}).isVisible())await page.getByRole('button',{name:'停止长期模拟'}).click();await expect(page.getByRole('dialog',{name:'长期模拟进行中'})).toHaveCount(0);expect((await readIndexedSave(page)).slots[0].player.history.length).toBeGreaterThan(0);
+});
+test('无欧冠资格的 MyCareer 联赛结束后可进入下一赛季，旧档也能补结算',async({page})=>{
+ let {season,player}=professionalFixture();startCup(season);let staleCup;
+ for(let i=0;i<30;i++){const next=simulateNextScheduled(season,player);season=next.season;player=next.career;if(i===28)staleCup=structuredClone(season.cup)}
+ expect(season.cup.teams).not.toContain(season.teamId);season.cup=staleCup;
+ const storage={value:null,setItem(key,value){this.value=value}};saveSaveData({version:2,active:0,slots:[makeCareerSlot(season,player),null,null]},storage);
+ await page.addInitScript(({key,value})=>localStorage.setItem(key,value),{key:SAVE_KEY,value:storage.value});await page.goto('/');await page.getByRole('button',{name:/继续生涯/}).click();
+ for(let i=0;i<2;i++)if(await page.getByRole('button',{name:'继续赛季 →'}).isVisible())await page.getByRole('button',{name:'继续赛季 →'}).click();
+ await page.getByRole('button',{name:'选择下一段旅程'}).click();await expect(page.getByRole('button',{name:/留队并进入休赛期/})).toBeVisible();expect((await readIndexedSave(page)).slots[0].season.cup.phase).toBe('complete');
 });

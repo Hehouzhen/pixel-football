@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {marketValue,careerDeal} from './player-value.mjs';
+import {marketValue,careerDeal,wageExpectation} from './player-value.mjs';
 import {createSeason,prepareSeason,simulateWeek,seasonRounds} from './league.mjs';
 import {createCareerPlayer} from './career.mjs';
 import {initializeJourney,signFirstContract,firstContractOffers} from './career-journey.mjs';
@@ -8,8 +8,13 @@ import {carryIdentity} from './identity.mjs';
 import {Match} from './engine.mjs';
 import {ceremony} from './awards.mjs';
 import {exportBackup,importBackup,makeCareerSlot} from './save-slots.mjs';
+import {ABILITIES} from './ratings.mjs';
+import {estimatedWage} from './football-life.mjs';
+import {wage} from './transfers.mjs';
 
 test('估值随年龄与潜力变化；免签仍有身价，成交费为零',()=>{const p=createCareerPlayer('林川',27,'midfielder'),s=createSeason('england','arsenal',41);prepareSeason(s);p.id='test';assert(marketValue({...p,age:22})>marketValue({...p,age:35}));s.playerData.test={...p,contractEndYear:2026};const deal=careerDeal(p,s,'chelsea');assert(deal.marketValue>0);assert.equal(deal.fee,0)});
+test('身价按档位平滑增长，MyCareer、续约与转会工资统一',()=>{const make=rating=>({position:5,age:25,potential:rating,attributes:Object.fromEntries(ABILITIES.map(key=>[key,rating]))}),elite=make(95),season=createSeason('england','arsenal',42);assert(marketValue(make(80))<marketValue(make(85)));assert(marketValue(make(85))<marketValue(elite));assert(marketValue({...elite,potential:99})<=260);assert.equal(estimatedWage(elite),wageExpectation(elite));assert.equal(wage(elite),wageExpectation(elite));assert.equal(careerDeal({...elite,id:'elite'},season,'arsenal').annualWage,wageExpectation(elite));assert(wageExpectation(elite)>3.95)});
+test('已签工资保留合同约定，续约预期按当前能力重算',()=>{const player={id:'signed',position:5,age:25,contractWage:3.95,attributes:Object.fromEntries(ABILITIES.map(key=>[key,95]))},season=createSeason('england','arsenal',43);season.playerData.signed=player;assert.equal(careerDeal(player,season,'arsenal').annualWage,3.95);assert(wageExpectation(player)>player.contractWage)});
 test('职业转会金额同时记入双方账目，且可往返保存',()=>{let {season:s,player:p}=initializeJourney(createCareerPlayer('林川',27,'midfielder'),createSeason('england','arsenal',41));p.journey.stage='contract';({season:s,player:p}=signFirstContract(p,s,firstContractOffers(p,s)[0].teamId));const from=s.teamId,to=from==='chelsea'?'arsenal':'chelsea';s.worldFunds={...s.worldFunds,[to]:100};s.balance=20;p.transferOffer={kind:'transfer'};const next=createSeason('england',to,42);next.calendar={startYear:2027};const deal=careerDeal(p,s,to);carryIdentity(s,next,p);assert.equal(next.balance,+(100-deal.fee).toFixed(2));assert.equal(next.worldFunds[from],+(20+deal.fee).toFixed(2));assert.equal(p.transferHistory.at(-1).fee,deal.fee);assert(importBackup(exportBackup({version:2,active:0,slots:[makeCareerSlot(next,p),null,null]})).slots[0])});
 test('不同方向的冲刺出脚保留足球真实位置，无回拉瞬移',()=>{for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1],[.707,.707]]){const m=new Match(),id=3;m.state='playing';m.ball.owner=id;m.players[id].dx=dx;m.players[id].dy=dy;m.step(.01,[{x:dx,y:dy,sprint:true},{}]);const {x,y}=m.ball;m.release(id,dx*500,dy*500);assert.equal(m.ball.x,x);assert.equal(m.ball.y,y)}});
 test('冠军荣誉包含实际出场的替补，排除只参与其他赛事的球员',()=>{const s=createSeason('england','arsenal',41);prepareSeason(s);s.awards={champion:'arsenal'};const reserve=s.squadIds.arsenal.find(id=>!s.rosterIds.arsenal.includes(id)),other=s.rosterIds.arsenal[0];s.results=[{home:'arsenal',away:'chelsea',score:[1,0],playerStats:[{playerId:reserve,teamId:'arsenal',minutesPlayed:25}]}];s.cup={results:[{playerStats:[{playerId:other,teamId:'arsenal',minutesPlayed:90}]}]};const rows=ceremony(s,'league').honorRows;assert(rows.some(([id,award])=>id===reserve&&award==='联赛冠军'));assert(!rows.some(([id,award])=>id===other&&award==='联赛冠军'))});

@@ -35,6 +35,23 @@ function line(ctx,points,color){ctx.fillStyle=color;for(const [x,y,w=1,h=1] of p
 export function headCanvas(look={},back=false){
  const {skin='#ebbd89',hair='#302b24',hairstyle=0,beard=0,brows=0,highlights=false,highlight='#aa8960',headband=false,bandStyle=0,accessoryColor='#d1ed8a'}=look;
  const c=document.createElement('canvas');c.width=c.height=36;const ctx=c.getContext('2d'),edge=mix(hair,'#0c1010',.7),shade=mix(hair,'#080d0e',.25),light=mix(hair,'#e8d4aa',.2),skinShade=mix(skin,'#7b4c36',.2);
+ if(back){
+  const rear=[[11,5],[25,5],[29,8],[31,13],[31,24],[28,29],[23,31],[13,31],[8,27],[5,23],[5,13],[8,8]],long=[3,19,22,23].includes(hairstyle),bald=hairstyle===5;
+  polygon(ctx,rear,skin,edge);line(ctx,[[4,18,3,6],[30,18,3,6],[15,29,7,6]],skinShade);line(ctx,[[5,18,1,4],[31,18,1,4],[16,31,4,3]],skin);
+  if(!bald){
+   const cap=hairstyle===6?[[16,4],[21,4],[22,28],[17,28]]:[[11,4],[25,4],[29,7],[31,12],[30,23],[26,27],[10,27],[6,23],[5,12],[8,7]];
+   polygon(ctx,cap,[4,15].includes(hairstyle)?mix(hair,skin,.18):hair,edge);
+   line(ctx,[[11,8,13,1],[8,12,2,8],[25,21,3,4]],shade);line(ctx,[[13,6,10,1],[11,7,3,1]],light);
+   if([2,7,17].includes(hairstyle))for(const [x,y] of [[7,8],[12,4],[22,4],[28,8],[5,17],[29,18]])polygon(ctx,[[x,y],[x+3,y-1],[x+5,y+2],[x+3,y+5],[x,y+3]],hair,edge);
+   if(long){polygon(ctx,[[7,19],[29,19],[30,31],[25,34],[20,32],[15,34],[7,31]],hair,edge);line(ctx,[[10,23,1,8],[16,27,1,5],[24,24,1,8]],shade)}
+   if([8,21,22].includes(hairstyle)){polygon(ctx,[[16,21],[21,21],[23,28],[21,35],[16,34],[14,29]],hair,edge);line(ctx,[[16,23,5,2]],accessoryColor)}
+   if(hairstyle===9)polygon(ctx,[[14,11],[17,8],[22,9],[25,13],[23,18],[16,18],[12,15]],hair,edge);
+   if([10,18,19,20].includes(hairstyle))for(const x of hairstyle===20?[8,26]:[9,14,20,25]){line(ctx,[[x,19,3,hairstyle===18?10:15]],edge);line(ctx,[[x,19,2,hairstyle===18?9:14]],shade)}
+   if(highlights)line(ctx,[[14,7,1,5],[13,12,1,3]],highlight);
+  }
+  if(headband){line(ctx,[[6,17,24,bandStyle===1?3:1]],accessoryColor);line(ctx,[[26,18,3,2],[28,20,1,5]],accessoryColor)}
+  return c;
+ }
  // Rear hair lies behind the face. These pixels never cover the eyes.
  if([3,19,22,23].includes(hairstyle))polygon(ctx,[[6,16],[12,15],[15,24],[14,33],[10,35],[5,32],[4,25]],shade,edge);
  if([8,21].includes(hairstyle))polygon(ctx,hairstyle===8?[[5,15],[10,17],[8,24],[9,30],[6,34],[3,31],[3,23]]:[[5,23],[10,22],[9,28],[11,33],[6,35],[3,31]],hair,edge);
@@ -42,12 +59,7 @@ export function headCanvas(look={},back=false){
  polygon(ctx,skull,skin,edge);polygon(ctx,[[7,21],[10,19],[12,23],[11,27],[8,27],[6,25]],skinShade);line(ctx,[[8,22,2,3]],skin);
  // The studio head replaces the source neck; reconnect it to the jersey in both views.
  line(ctx,[[18,33,5,3]],edge);line(ctx,[[19,33,3,3]],skinShade);line(ctx,[[19,33,2,2]],skin);
- if(back){
-  if(hairstyle===6){polygon(ctx,[[19,5],[24,5],[25,12],[25,27],[22,30],[19,28]],hair,edge)}
-  else if(hairstyle!==5){polygon(ctx,skull,[4,15].includes(hairstyle)?mix(hair,skin,.24):hair,edge);if(![3,19,22,23].includes(hairstyle)){for(let y=28;y<32;y++)for(let x=14;x<29;x++)if(inside(x+.5,y+.5,skull)){ctx.fillStyle=skinShade;ctx.fillRect(x,y,1,1)}line(ctx,[[14,28,3,1],[27,27,3,1]],shade)}else line(ctx,[[11,27,3,3],[15,29,4,2],[21,30,6,1]],shade)}
-  else line(ctx,[[13,28,4,1],[27,27,3,1]],skinShade);
- }
- else{
+ {
   line(ctx,[[19,20,2,5],[28,20,2,5]],'#171713');line(ctx,[[31,24,1,2]],skinShade);line(ctx,[[24,29,3,1]],skinShade);
   const patterns=[[[18,18,3,1],[27,18,3,1]],[[18,18,4,1],[26,18,4,1]],[[18,17,4,2],[26,17,4,2]],[[19,18,2,1],[28,18,2,1]],[[18,18,2,1],[20,17,2,1],[27,17,2,1],[29,18,1,1]],[[18,17,3,1],[27,17,3,1]]];line(ctx,patterns[brows]??patterns[0],shade);
  }

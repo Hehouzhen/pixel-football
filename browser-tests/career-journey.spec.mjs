@@ -16,8 +16,14 @@ test('新生涯的愿望、选择和准备可以保存，桌面与手机没有�
 test('毕业签约进入较弱职业球队，模拟首秀保持真实替补分钟和独立身份',async({page})=>{
   const errors=[];page.on('pageerror',e=>errors.push(e.message));const {season,player}=graduation(),original=season.rosterIds[firstContractOffers(player,season)[0].teamId].map(id=>({id,name:season.playerData[id].name}));await load(page,season,player);
   await expect(page.getByRole('heading',{name:'第一份合同，你来选择'})).toBeVisible();await expect(page.getByRole('button',{name:'接受这份合同'})).toHaveCount(3);await page.getByRole('button',{name:'接受这份合同'}).first().click();await expect(page.locator('.journey-role')).toContainText('60′');
-  await page.getByRole('button',{name:'模拟这场比赛'}).click();await expect.poll(async()=>(await saved(page)).slots[0].player.stats.appearances).toBe(1);const slot=(await saved(page)).slots[0];expect(slot.player.lastMatch.minutes).toBeGreaterThanOrEqual(29);expect(slot.player.lastMatch.minutes).toBeLessThanOrEqual(31);for(const item of original)expect(slot.season.playerData[item.id].name).toBe(item.name);
-  await page.getByRole('button',{name:'走过的路',exact:true}).click();await expect(page.getByRole('heading',{name:'职业首秀',exact:true})).toBeVisible();expect(errors).toEqual([]);
+  await page.getByRole('button',{name:'进入模拟观赛'}).click();await page.getByRole('button',{name:'模拟至终场',exact:true}).click();await expect(page.getByRole('region',{name:'本场模拟窗口'})).toContainText('本场已结束');await expect.poll(async()=>(await saved(page)).slots[0].player.stats.appearances).toBe(1);const slot=(await saved(page)).slots[0];expect(slot.player.lastMatch.minutes).toBeGreaterThanOrEqual(29);expect(slot.player.lastMatch.minutes).toBeLessThanOrEqual(31);for(const item of original)expect(slot.season.playerData[item.id].name).toBe(item.name);
+  expect(errors).toEqual([]);
+});
+test('职业比赛可直接不进场模拟并仍结算替补分钟',async({page})=>{
+  const errors=[];page.on('pageerror',e=>errors.push(e.message));const {season,player}=graduation();await load(page,season,player);
+  await page.getByRole('button',{name:'接受这份合同'}).first().click();await page.getByRole('button',{name:'不进场模拟',exact:true}).click();
+  await expect(page.locator('.postmatch-modal')).toBeVisible();await expect.poll(async()=>(await saved(page)).slots[0].player.stats.appearances).toBe(1);
+  const record=(await saved(page)).slots[0].player.lastMatch;expect(record.minutes).toBeGreaterThanOrEqual(29);expect(record.minutes).toBeLessThanOrEqual(31);expect(errors).toEqual([]);
 });
 test('实际替补比赛可要球、暂停并从生涯页面继续，合同页面在手机上可用',async({page})=>{
   const errors=[];page.on('pageerror',e=>errors.push(e.message));const base=graduation();await load(page,base.season,base.player);await page.screenshot({path:'test-results/journey-contract-desktop.png',fullPage:true});await page.setViewportSize({width:390,height:844});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);await page.screenshot({path:'test-results/journey-contract-mobile.png',fullPage:true});await page.setViewportSize({width:1440,height:1000});

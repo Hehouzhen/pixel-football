@@ -4,7 +4,7 @@ import {LEAGUES,getTeam,prepareSeason,seasonRounds} from './league.mjs';
 import {activePlayers,teamName} from './identity.mjs';
 import {squadNeeds} from './market-intelligence.mjs';
 
-import {marketValue} from './player-value.mjs';
+import {marketValue,wageExpectation} from './player-value.mjs';
 const positions=['门将','后卫','后卫','中场','中场','前锋'];
 const clamp=(n,min,max)=>Math.max(min,Math.min(max,n));
 const round=n=>+Math.max(0,n).toFixed(1);
@@ -13,7 +13,7 @@ const seasonNumber=season=>(season.history?.length??0)+1;
 const marketKey=season=>`${season.calendar?.startYear??2026+(season.history?.length??0)}:${windowState(season).kind}`;
 const rated=playerQuality;
 export const value=marketValue;
-export const wage=p=>p.contractWage??+(value(p)*.12).toFixed(1);
+export const wage=p=>p.contractWage??wageExpectation(p);
 export function windowState(season){const winterRound=Math.floor((seasonRounds(season)??14)/2),span=season.formatVersion===1?1:3,kind=season.week<span?'summer':season.week>=winterRound&&season.week<winterRound+span?'winter':null,limit=kind==='summer'?2:kind==='winter'?1:0,used=(season.transfers??[]).filter(t=>t.season===seasonNumber(season)&&t.window===kind).length;return {kind,limit,used,remaining:kind?Math.max(0,limit-used):0}}
 export function finances(season){const team=getTeam(season.teamId),strength=team?.strength??1,base=+(16+strength*18).toFixed(1),balance=season.balance??base,wages=squadPlayers(season,season.teamId).reduce((n,p)=>n+wage(p),0);return {balance:+balance.toFixed(1),wages:+wages.toFixed(1),wageCap:+wageBudget(season.teamId).toFixed(1)}}
 const teamPlayers=(season,teamId)=>activePlayers(season,teamId).filter(Boolean);

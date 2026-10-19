@@ -116,3 +116,87 @@ test('pressured carrier has an escape when every teammate is tightly covered',()
     if(!m.passes[1])m.ball={...m.ball,owner:11,x:489,y:FIELD.center,last:1};m.step(.01);
   }assert(m.passes[1]>0,'the carrier must eventually play away from a blocked cluster');
 });
+
+
+test('carried ball turns continuously and converges without oscillation',()=>{
+  const m=scene(null),p=m.players[5];m.selected[0]=5;p.x=500;p.y=FIELD.center;p.dx=1;p.dy=0;m.ball={...m.ball,owner:5,last:0};
+  m.step(.01);const start=m.ball.x;p.dx=-1;
+  m.step(.01);assert(Math.abs(m.ball.x-start)<8,'turn must not teleport the ball across the player');
+  let previous=m.ball.x;
+  for(let i=0;i<35;i++){m.step(.01);assert(m.ball.x<=previous+1e-8);previous=m.ball.x}
+  assert(m.ball.x<p.x-8);assert(m.ball.x>p.x-18);
+});
+
+test('carry smoothing is consistent across frame rates and stable at rest',()=>{
+  const run=dt=>{const m=scene(null),p=m.players[5];m.selected[0]=5;p.x=500;p.y=FIELD.center;p.dx=1;p.dy=0;m.ball={...m.ball,owner:5,last:0};m.step(.01);p.dx=0;p.dy=1;for(let i=0;i<Math.round(.4/dt);i++)m.step(dt);return [m.ball.x,m.ball.y]};
+  const a=run(.01),b=run(.025);assert(Math.hypot(a[0]-b[0],a[1]-b[1])<.01);
+});
+
+
+test('wide support keeps its side when the carrier crosses the centre line',()=>{
+  for(const half of [1,2]){const m=scene(null),holder=m.players[5];m.selected[0]=5;m.half=half;holder.y=FIELD.center-.1;holder.heldSince=m.time;m.ball.owner=5;
+    const roles=m.attackRoles(0,holder),id=Number(Object.keys(roles).find(id=>roles[id]==='width'));
+    const before=m.offBallTarget(id,holder,'width');holder.y=FIELD.center+.1;
+    m.attackRoles(0,holder);const after=m.offBallTarget(id,holder,'width');assert(Math.abs(after.y-before.y)<1,'tiny carrier movement must not send the winger to the opposite touchline');
+  }
+});
+
+test('successful slide retains recovery and cannot immediately tackle again',()=>{
+  const original=Math.random;try{Math.random=()=>0;const m=scene(),p=m.players[5],q=m.players[11];p.x=420;p.y=FIELD.center;p.cool=0;q.x=400;q.y=FIELD.center;q.dx=1;m.ball.owner=11;
+    assert(m.attemptTackle(5,false,true,true));assert.equal(m.ball.owner,5);assert(p.tackleRecovery>=.3);m.ball.owner=11;p.cool=0;assert.equal(m.canTackle(5),false);
+    p.tackleRecovery=0;assert(m.canTackle(5));
+  }finally{Math.random=original}
+});
+
+test('requested pass waits for the receiving touch and then sends once',()=>{
+  const m=requestScene();m.players[11].y=FIELD.top+20;m.players[5].settle=.18;
+  assert(m.requestPass());assert.equal(m.passes[0],0);advance(m,.1);assert.equal(m.passes[0],0);
+  advance(m,.12);assert.equal(m.passes[0],1);assert.equal(m.passRequest,null);
+});
+
+
+function incomingPass(careerIndex=null){
+  const m=scene(careerIndex),id=careerIndex??3;m.selected[0]=id;
+  m.players[id].x=600;m.players[id].y=FIELD.center;m.players[id].cool=0;
+  m.players[4].x=730;m.players[4].y=FIELD.center+65;
+  m.ball={x:578,y:FIELD.center,z:0,vx:360,vy:0,vz:0,owner:null,lock:0,last:0,kind:'pass',source:5,receiver:id};return m;
+}
+
+test('pass input before reception executes once in club and career',()=>{
+  for(const mode of [null,3]){const m=incomingPass(mode);let accepted=0;handlePassInput(m,false,()=>accepted++);
+    assert(m.pendingPass);assert.equal(accepted,1);assert.equal(m.passes[0],0);
+    advance(m,.09);assert.equal(m.pendingPass,null);assert.equal(m.passes[0],1);assert.equal(m.ball.source,3);
+    advance(m,.15);assert.equal(m.passes[0],1);
+  }
+});
+
+test('one-touch pass preserves pointer aim and through intent',()=>{
+  const m=incomingPass();m.pointer={x:650,y:FIELD.center+160};handlePassInput(m,true,()=>{},'through');
+  m.pointer.y=FIELD.top;advance(m,.09);assert.equal(m.passes[0],1);assert(m.ball.vy>Math.abs(m.ball.vx));const through=incomingPass();handlePassInput(through,false,()=>{},'through');advance(through,.09);assert.equal(through.ball.passIntent,'through');
+});
+
+test('one-touch pass expires and never fires after an interception or manual switch',()=>{
+  const slow=incomingPass();slow.ball.vx=10;handlePassInput(slow);advance(slow,.15);assert.equal(slow.pendingPass,null);slow.takeBall(3);advance(slow,.02);assert.equal(slow.passes[0],0);
+  const lost=incomingPass();handlePassInput(lost);lost.takeBall(11);assert.equal(lost.pendingPass,null);lost.takeBall(3);advance(lost,.02);assert.equal(lost.passes[0],0);
+  const switched=incomingPass();handlePassInput(switched);switched.switch(0);assert.equal(switched.pendingPass,null);
+});
+
+test('distant, outgoing and opposition balls do not queue a pass',()=>{
+  for(const change of [m=>m.ball.x=500,m=>m.ball.vx=-360,m=>m.ball.last=1,m=>m.ball.z=12]){const m=incomingPass();change(m);handlePassInput(m);assert(!m.pendingPass);assert.equal(m.passes[0],0)}
+});
+
+test('club passer can prepare the intended receiver without remotely controlling other teammates',()=>{
+  const m=incomingPass();m.selected[0]=5;m.ball.controlSource=5;handlePassInput(m);assert.equal(m.pendingPass?.id,3);advance(m,.09);assert.equal(m.passes[0],1);assert.equal(m.selected[0],3);
+});
+
+test('new possession re-evaluates the flank even when the same player regains the ball',()=>{
+  const m=scene(null),p=m.players[5];m.selected[0]=5;p.y=FIELD.center-10;m.ball.owner=5;m.attackRoles(0,p);const side=m.rolePlanCache[0].wingSide;
+  m.takeBall(11);p.y=FIELD.center+10;m.takeBall(5);m.attackRoles(0,p);assert.notEqual(m.rolePlanCache[0].wingSide,side);
+});
+
+
+test('a newer shot replaces the prepared pass; resets cancel it',()=>{
+  const m=incomingPass();handlePassInput(m);assert(m.shoot(.5,{x:FIELD.right,y:FIELD.center}));assert.equal(m.pendingPass,null);advance(m,.09);assert.equal(m.shots[0],1);assert.equal(m.passes[0],0);
+  for(const reset of [m=>m.reset(0),m=>m.restart(0,500,FIELD.top+7,'边线球',0)]){const m=incomingPass();handlePassInput(m);reset(m);assert.equal(m.pendingPass,null)}
+  const unknown=incomingPass();unknown.selected[0]=5;unknown.ball.controlSource=5;delete unknown.ball.receiver;assert.doesNotThrow(()=>handlePassInput(unknown));assert(!unknown.pendingPass);
+});

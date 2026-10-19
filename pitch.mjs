@@ -1,3 +1,4 @@
+import {bodyPose,strikePose} from './player-motion.mjs';
 import {FIELD} from './engine.mjs';
 import {drawSprite,spritePose} from './player-sprite.mjs';
 import {celebrationPose} from './celebration.mjs';
@@ -23,16 +24,17 @@ export function draw(ctx,g){const f=FIELD;ctx.imageSmoothingEnabled=false;ctx.fi
     const keeperPose=p.i===0&&!pose?keeperVisual(p,g.time,g.ball,g.direction(p.t)):null;
     const x=Math.round(p.x+(pose?.dx??0)),y=Math.round(p.y+(pose?.dy??keeperPose?.dy??0));
     const selected=!g.replayView&&id===g.selected[0],baseNumber=p.i===0?1:p.i+5,number=g.playerNumbers?.[id]??(id===g.careerIndex?g.careerNumber:baseNumber);
-    const look=g.playerLooks?.[id]??(id===g.careerIndex?g.careerLook:null),skin=look?.skin??SKINS[id%SKINS.length],hair=look?.hair??HAIRS[id%HAIRS.length],kit=p.i===0?(g.keeper?.[p.t]??'#f9d26c'):(g.colors?.[p.t]??(p.t===0?'#77bafd':'#fa8c76'));
+    const look=(id===g.careerIndex?g.careerLook:null)??g.playerLooks?.[id],skin=look?.skin??SKINS[id%SKINS.length],hair=look?.hair??HAIRS[id%HAIRS.length],kit=p.i===0?(g.keeper?.[p.t]??'#f9d26c'):(g.colors?.[p.t]??(p.t===0?'#77bafd':'#fa8c76'));
     ctx.fillStyle='#122d2660';ctx.fillRect(x-10,y+8,20,5);
     if(pose?.dust){ctx.fillStyle='#b6d29e';const dir=Math.sign(pose.dx||p.dx||1);for(let n=0;n<3;n++)ctx.fillRect(x-dir*(13+n*9),y+7-(n%2)*4,4+n*2,3)}
     if(p.tackleWindup>0){ctx.strokeStyle='#f2bb70';ctx.lineWidth=2;ctx.beginPath();ctx.arc(x,y+3,17,0,Math.PI*2);ctx.stroke()}
     if(selected){ctx.strokeStyle='#d5ff78';ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(x,y+6,14,6,0,0,7);ctx.stroke();ctx.fillStyle=ctx.strokeStyle;ctx.beginPath();ctx.moveTo(x-5,y-35);ctx.lineTo(x+5,y-35);ctx.lineTo(x,y-29);ctx.fill()}
     const [row,col]=pose?[pose.row,pose.col]:spritePose(p,g.time,false,phase,selected&&g.ball.owner===id?g.charge:0),kickAge=g.time-(p.kickAt??-10),recentKick=kickAge>=0&&kickAge<.36;
+    const facing=bodyPose(p,g.time),strike=!pose&&p.i!==0?strikePose(p,g.time):null;
     const rotation=pose?.rotation??(recentKick&&p.kickType==='bicycle'?-.95:0);
     if(keeperPose)drawKeeper(ctx,{x,y,pose:keeperPose.pose,side:keeperPose.side,flip:keeperPose.flip,kit,skin,hair,look});
-    else drawSprite(ctx,{x,y,row,col,kit,skin,hair,shoes:look?.shoes??'#f47b28',look:look??{},hairstyle:look?.hairstyle??0,sleeve:look?.sleeve??'short',flip:pose?.flip??((p.dx??g.direction(p.t))<0),rotation,scaleX:pose?.scaleX??1,scaleY:pose?.scaleY??1,back:pose?.back??(p.dy<-.55),backNumber:number,gloves:p.i===0?'#eefaf2':null,size:p.i===0?46:44});
-    if(!rotation&&(!pose||pose.scaleX>.7&&pose.scaleY>.8)){ctx.font='900 10px Impact, Arial Narrow, sans-serif';ctx.textAlign='center';ctx.fillStyle=g.numberInk?.[p.t]??'#fafbec';ctx.fillText(String(number),x,y-3)}
+    else drawSprite(ctx,{x,y,row,col,kit,skin,hair,shoes:look?.shoes??'#f47b28',look:look??{},hairstyle:look?.hairstyle??0,sleeve:look?.sleeve??'short',flip:pose?.flip??facing.flip,rotation,scaleX:pose?.scaleX??facing.scaleX,scaleY:pose?.scaleY??1,back:pose?.back??facing.back,rearTurn:facing.rearTurn,strike,backNumber:number,gloves:p.i===0?'#eefaf2':null,size:p.i===0?46:44});
+    if(!(pose?.back??facing.back)&&!rotation&&(!pose||pose.scaleX>.7&&pose.scaleY>.8)){ctx.font='900 10px Impact, Arial Narrow, sans-serif';ctx.textAlign='center';ctx.fillStyle=g.numberInk?.[p.t]??'#fafbec';ctx.fillText(String(number),x,y-3)}
     if(selected){ctx.fillStyle='#ecffd5';ctx.font='900 13px Impact, Arial Narrow, sans-serif';ctx.fillText(`${number}号`,x,y-41);ctx.fillStyle='#17341d';ctx.fillRect(x-12,y+15,24,3);ctx.fillStyle='#caff70';ctx.fillRect(x-12,y+15,24*p.stamina,3)}
     if(g.stats[id].yellows){ctx.fillStyle='#ffe273';ctx.fillRect(x+11,y-25,5,8)}
   }

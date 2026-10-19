@@ -1,6 +1,7 @@
 export function handlePassInput(match,towardPointer=false,onSuccess=()=>{},intent='feet'){
   if(!match||match.state!=='playing'||match.shootoutMode)return;
   if(match.penalty){match.announce('点球时请使用射门操作');return;}
+  if(match.preparePass(towardPointer?match.pointer:null,intent==='through'?'through':false)){onSuccess();return;}
   if(match.careerIndex!==null&&match.ball.owner!==match.careerIndex){
     if(match.requestPass(0,intent))onSuccess();
     return;

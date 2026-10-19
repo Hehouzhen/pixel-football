@@ -1,3 +1,5 @@
+import {drawStrikeFeet} from './player-motion.mjs';
+import {drawRearFrame,drawRearNumber} from './rear-sprite.mjs';
 import {drawHeadDetails} from './appearance.mjs';
 import {headCanvas} from './studio-head.mjs';
 import spriteUrl from './player-motion-demo/player-chunky-adult-frames.png';
@@ -8,12 +10,13 @@ source.onload=()=>{for(const listener of listeners)listener();listeners.clear()}
 
 function rgb(hex,fallback){const value=/^#[0-9a-f]{6}$/i.test(hex??'')?hex:fallback;return [1,3,5].map(i=>parseInt(value.slice(i,i+2),16))}
 function tint(data,index,color,shade){for(let c=0;c<3;c++)data[index+c]=Math.max(0,Math.min(255,Math.round(color[c]*shade)))}
-function frame(row,col,kit,skin,hair,shoes,hairstyle,sleeve,back=false,gloves=null,look={}){
+function frame(row,col,kit,skin,hair,shoes,hairstyle,sleeve,back=false,gloves=null,look={},turn=0){
   if(!source.complete||!source.naturalWidth)return null;
-  const key=[row,col,kit,skin,hair,shoes,hairstyle,sleeve,back,gloves,JSON.stringify(look)].join('|');
+  const key=[row,col,kit,skin,hair,shoes,hairstyle,sleeve,back,gloves,turn,JSON.stringify(look)].join('|');
   if(frames.has(key))return frames.get(key);
   const canvas=document.createElement('canvas');canvas.width=canvas.height=64;
   const ctx=canvas.getContext('2d',{willReadFrequently:true});ctx.imageSmoothingEnabled=false;
+  if(back){Object.assign(canvas,drawRearFrame(ctx,{row,col,kit,skin,hair,shoes,hairstyle,sleeve,gloves,look,turn}));frames.set(key,canvas);if(frames.size>384)frames.delete(frames.keys().next().value);return canvas}
   ctx.drawImage(source,col*256,row*256,256,256,0,0,64,64);
   const pixels=ctx.getImageData(0,0,64,64),data=pixels.data,colors={kit:rgb(kit,'#327fdf'),skin:rgb(skin,'#ebbd89'),hair:rgb(hair,'#302b24'),shoes:rgb(shoes,'#f47b28'),gloves:rgb(gloves,'#f2f7ec')};
   let torsoSum=0,torsoCount=0,footY=0,headLeft=64,headRight=0,headTop=64,headBottom=0,sockPixels=[],bootPixels=[],armPixels=[[],[]],hairPixels=[],facePixels=[];
@@ -29,12 +32,10 @@ function frame(row,col,kit,skin,hair,shoes,hairstyle,sleeve,back=false,gloves=nu
     if(y>=30&&y<=39&&b>120&&b>g*1.25&&g>r*1.5){torsoSum+=x;torsoCount++}
     if(y>=29&&y<51&&b>120&&b>g*1.25&&g>r*1.5){tint(data,i,colors.kit,(r+g+b)/416);continue}
     if(y<34&&r>48&&r<175&&r>g*1.3&&g>b*1.15){tint(data,i,hairstyle===5||hairstyle===4&&y>17?colors.skin:colors.hair,(r+g+b)/171);continue}
-    if(back&&y>=20&&y<32&&x>=34&&x<51&&r<70&&g<70&&b<70){tint(data,i,hairstyle===5?colors.skin:colors.hair,.92);continue}
-    if(y<52&&r>160&&g>85&&r>g*1.18&&g>b*1.18){if(y>=32||y>=18&&(x<headLeft-2||x>headRight+2))armPixels[x<36?0:1].push([x,y]);tint(data,i,back&&y<34?(hairstyle===5?colors.skin:colors.hair):gloves&&(y>=33||x<29&&y>=26||x>=52&&y>=20)?colors.gloves:colors.skin,(r+g+b)/544);continue}
+    if(y<52&&r>160&&g>85&&r>g*1.18&&g>b*1.18){if(y>=32||y>=18&&(x<headLeft-2||x>headRight+2))armPixels[x<36?0:1].push([x,y]);tint(data,i,gloves&&(y>=33||x<29&&y>=26||x>=52&&y>=20)?colors.gloves:colors.skin,(r+g+b)/544);continue}
     if(y>=50&&r>160&&r>g*1.5&&g>b*1.3)tint(data,i,colors.shoes,(r+g+b)/342);
   }
   ctx.putImageData(pixels,0,0);
-  if(back&&hairstyle!==5&&look.studio!==1){ctx.fillStyle=hair;ctx.fillRect(35,21,3,4);ctx.fillRect(43,21,3,4)}
   if(sleeve==='long'){ctx.fillStyle=kit;ctx.fillRect(24,39,5,6);ctx.fillRect(45,39,5,6)}
   if(sleeve==='band'){ctx.fillStyle='#f2f2ea';ctx.fillRect(23,43,6,2);ctx.fillRect(45,43,5,2)}
   if(headRight>headLeft){
@@ -48,6 +49,7 @@ function frame(row,col,kit,skin,hair,shoes,hairstyle,sleeve,back=false,gloves=nu
   // Source masks keep socks and boot accents attached to animated limbs.
   if(look.sockLength||look.bootAccent){const detail=ctx.getImageData(0,0,64,64),d=detail.data,sock=rgb(look.sockColor,'#eef3dc'),accent=rgb(look.bootAccent,'#252d3a');for(const [x,y,shade] of sockPixels)if(look.sockLength&&y>=footY-({short:5,normal:9,high:14}[look.sockLength]??9))tint(d,(y*64+x)*4,sock,Math.min(1,Math.max(.65,shade)));for(const [x,y,shade] of bootPixels)if(look.bootAccent&&(x+y)%6<2)tint(d,(y*64+x)*4,accent,Math.min(1,shade));ctx.putImageData(detail,0,0)}
   canvas.anchorX=torsoCount?torsoSum/torsoCount:32;canvas.footY=footY;
+  if(row!==0||col!==0){const neutral=frame(0,0,kit,skin,hair,shoes,hairstyle,sleeve,false,gloves,look);canvas.anchorX=neutral.anchorX;canvas.footY=neutral.footY;}
   frames.set(key,canvas);
   if(frames.size>384)frames.delete(frames.keys().next().value);
   return canvas;
@@ -60,18 +62,18 @@ export function spritePose(player,time,celebrating=false,phase=0,charge=0){
   if(player.dive>0)return [2,4];
   if(player.tackleWindup>0)return [2,1];
   if(Number.isFinite(player.tackleAt)&&time-player.tackleAt>=0&&time-player.tackleAt<.3)return [2,3];
-  if(Number.isFinite(player.kickAt)&&time-player.kickAt>=0&&time-player.kickAt<.36){const age=time-player.kickAt;return player.kickType==='header'?[2,2]:player.kickType==='shot'?(age<.12?[2,4]:[2,5]):[2,Math.min(5,4+Math.floor(age*6))]}
+  if(Number.isFinite(player.kickAt)&&time-player.kickAt>=0&&time-player.kickAt<.36){const age=time-player.kickAt;return player.kickType==='header'?[2,2]:(age<(player.kickType==='shot'&&player.kickPower>=.75?.075:.045)?[2,4]:[2,5])}
   if(player.aiKick)return [2,Math.min(3,Math.floor((time-player.aiKick.started)/.025))];
   if(charge>0)return [2,charge<.45?0:1];
   if(Math.hypot(player.vx??0,player.vy??0)>15)return [1,Math.floor(Math.abs(player.anim??0)*.45)%6];
   return [0,Math.floor(time*3)%6];
 }
 
-export function drawSprite(ctx,{x,y,row,col,kit,skin,hair,shoes,hairstyle=0,sleeve='short',flip=false,rotation=0,scaleX=1,scaleY=1,back=false,backNumber=null,gloves=null,look={},size=42}){
-  const sprite=frame(row,col,kit,skin,hair,shoes,hairstyle,sleeve,back,gloves,look);if(!sprite)return false;
+export function drawSprite(ctx,{x,y,row,col,kit,skin,hair,shoes,hairstyle=0,sleeve='short',flip=false,rotation=0,scaleX=1,scaleY=1,back=false,backNumber=null,gloves=null,look={},size=42,rearTurn=0,strike=null}){
+  const sprite=frame(row,col,kit,skin,hair,shoes,hairstyle,sleeve,back,gloves,look,Math.abs(rearTurn)>.35?Math.sign(rearTurn):0);if(!sprite)return false;
   ctx.save();ctx.imageSmoothingEnabled=false;ctx.translate(Math.round(x),Math.round(y));ctx.scale((flip?-1:1)*scaleX*({slim:.9,broad:1.1}[look.build]??1),scaleY*(look.heightScale??1));if(rotation)ctx.rotate(rotation);
   const left=-sprite.anchorX/64*size,top=9-(row===3?62:sprite.footY)/64*size;
-  ctx.drawImage(sprite,left,top,size,size);if(back&&backNumber!==null){ctx.font=`bold ${Math.round(size*.11)}px monospace`;ctx.textAlign='center';ctx.fillStyle='#f5f4e6';ctx.fillText(String(backNumber),left+size*.56,top+size*.68)}ctx.restore();return true;
+  if(strike){ctx.save();ctx.beginPath();ctx.rect(left,top,size,49/64*size);ctx.clip();ctx.drawImage(sprite,left,top,size,size);ctx.restore()}else ctx.drawImage(sprite,left,top,size,size);if(back&&backNumber!==null){ctx.scale(flip?-1:1,1);drawRearNumber(ctx,backNumber,(flip?-1:1)*(left+sprite.numberX/64*size),top+sprite.numberY/64*size,Math.max(1,Math.round(size/64)))}ctx.restore();if(strike)drawStrikeFeet(ctx,{x,y,size,strike,skin,shoes,look});return true;
 }
 
 export function drawPortrait(canvas,{kit,skin,hair,shoes,hairstyle=0,sleeve='short',number,ink='#f2f2ea',look={}}){

@@ -2,16 +2,17 @@ import {recordRecovery} from './recovery.mjs';
 import {getTeam} from './clubs.mjs';
 import {positionRating} from './ratings.mjs';
 import {initialTraits,recordChemistry} from './player-context.mjs';
+import {wageExpectation} from './player-value.mjs';
 
 export const SQUAD_ROLES={starter:'常规首发',rotation:'轮换球员',prospect:'培养对象'};
 export const positionGroup=index=>index===0?0:index<3?1:index<5?3:5;
 export const lifeYear=season=>season.calendar?.startYear??2026;
 const hash=text=>{let n=2166136261;for(const c of String(text)){n^=c.charCodeAt(0);n=Math.imul(n,16777619)}return n>>>0};
 export const playerQuality=positionRating;
-export const estimatedWage=p=>+(Math.max(1,(playerQuality(p)-45)*.48)**1.15*.12).toFixed(1);
+export const estimatedWage=wageExpectation;
 export const squadPlayers=(season,teamId)=>[...new Set([...(season.squadIds?.[teamId]??[]),...(season.rosterIds?.[teamId]??[])])].map(id=>season.playerData[id]).filter(p=>p&&!p.retired&&!p.freeAgent&&p.teamId===teamId);
 export const annualWage=p=>p.contractWage??estimatedWage(p);
-export const wageBudget=teamId=>18+(getTeam(teamId)?.strength??1)*2;
+export const wageBudget=teamId=>24+(getTeam(teamId)?.strength??1)*4;
 
 export function lifeEvent(season,type,playerId,text,key){
   season.lifeEvents??=[];

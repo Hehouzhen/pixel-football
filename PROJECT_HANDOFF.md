@@ -1,6 +1,153 @@
 # 像素绿茵：上线与后续开发交接
 
-更新日期：2026-10-12。此文档供同一 Codex 项目中的新对话直接接手使用。线上状态和 Git 提交可能晚于本地工作区；每次开始前核对 Git 状态和存档版本，不要把过往计划当成已实现功能。
+## 当前交接基线（2026-10-19，Codex / DeepSeek 共用）
+
+**本次发布授权：用户已明确要求按当前本机版本提交至GitHub并部署公开网页。** 执行范围及边界见RELEASE_20261019.md；下方旧任务的“未授权发布/未提交”是当时状态。本次不处理个人存档恢复，不把G1—G6计划标为已实现，发布结果由实际Actions与公开页面验证。
+
+**最新继续复审：R14已通过专项范围，R15/R16仍各缺一处，G1—G6未开始。** 见CODEX_R14_R16_FOLLOWUP_REVIEW_20261019.md：33项及浏览器2项由Codex本轮独立通过，仍需补实战/国家队完整事实比较和v1/32位收据兼容。此前复审结论保留作历史，不代表此刻所有旧问题仍未修复。未修改游戏实现/真实存档或发布。
+
+**最新复审补充：MATCH-LEDGER-01尚未通过核心验收。** 详见CODEX_MATCH_LEDGER_REVIEW_20261019.md，下一轮先修R7—R13；下方DeepSeek的实现/测试记录保留为其交付证据，不覆盖本次独立反例。Codex本轮74项相关检查通过，另复现渲染20/24失败；未运行全库/浏览器或发布，未修改游戏实现或真实存档。
+
+**先读本节。下方按日期保留的旧记录不是当前功能开关表；其中“国家队尚未接入”等描述已被后续本机实现替代。**
+
+### 文档入口与代码版本
+
+- 接手入口：`DEEPSEEK_START_HERE.md`；开发规则：`AGENTS.md`；长期要求：`PRODUCT_REQUIREMENTS.md`；任务状态：`TASKS.md`；关键取舍：`DECISIONS.md`。
+- 实际代码根目录：`C:\Users\何厚臻\Documents\Codex\2026-09-29\sites-plugin-sites-openai-curated-remote\pixel-football`。聊天的 `2026-10-14\wo` 目录不是本次正式代码根目录。
+- 本轮已核验分支 `main`，HEAD `2d54b7aa2f915e6c1b3968a18d13212618963d22`（Release gameplay, career, tactics, and Dream Squad updates）。**存在大量已修改与未跟踪源码、测试及资源；该提交不能代表当前全部本机版本。** 不执行 reset/clean 或覆盖未提交内容。
+- 最近工作为 MATCH-LEDGER-01（统一结算与可追溯履历）及 ID-03 阶段0 R5/R6 修复，已专项验证并构建；未提交、推送、部署、修改用户存档或重跑完整 Playwright。线上实际状态本轮未核验。
+- 日常本机入口 `http://127.0.0.1:4177/`；自动浏览器测试由配置启动 `4199`。当前服务是否运行需接手者确认。`dist` 包含直接维护的 CSS/HTML/图片，不应整体删除。
+
+### 当前实现地图
+
+| 领域 | 当前代码入口 | 状态与边界 |
+|---|---|---|
+| 页面与流程 | src.jsx、ui.jsx、career-journey.jsx、dist/*.css | 新旧生涯界面并存；职业 journey 仍保留 journey 字段 |
+| 实操比赛与像素动作 | engine.mjs、pitch.mjs、player-motion.mjs、rear-sprite.mjs、player-sprite.mjs | Match 动作引擎；视觉/手感仍需用户验收 |
+| 俱乐部模拟 | simulation.mjs、long-simulation.mjs、league.mjs、cup.mjs | EventMatch 事件引擎；不等同于 Match |
+| MyCareer | career.mjs、career-journey.mjs、src.jsx | 青训、合同、职业机会、跨季、发展；顶部职业长期模拟已接线 |
+| 国家队 | national-team.mjs、international-career.mjs、national-progression.mjs、national-countries.mjs | 已有征召、比赛、赛事、归队与故事实现；规则适配见 NATIONAL_CAREER_IMPLEMENTATION.md |
+| 世界身份 | identity.mjs、world-player-identity.mjs、player-registry.mjs、player-names.mjs | 已有稳定 ID 与部分统一读取；整体工程未完成 |
+| 保存 | save-slots.mjs、history.mjs | 已使用 IndexedDB 和独立赛季归档，也有回退；不能再假定仅 localStorage |
+| 只读诊断 | identity-audit.mjs、audit-identity.mjs、test-fixtures/identity-worlds.mjs | 有诊断与固定生成样本，仍有失败回归待处理 |
+| Dream Squad | dream-team.mjs、dream-player-catalog.mjs 及相关签约/货币模块 | 现有抽卡、卡牌与收藏系统；此次未修改或重新验收 |
+
+### 最近完成的本机工作与证据
+
+- CAREER-04：新增 career-market.mjs / career-future.jsx，职业赛季结束后可从“休赛期 · 我的未来”进入独立页面，三步完成意愿、球探接触和正式报价；支持主动申请、私下寻找、留队、租借、三支心仪球队、偏好选择、一次待遇沟通及撤回历史。表现、样本、位置竞争与适配影响关注，资金/工资/名额限制正式报价。快照保存、刷新稳定、新季隔离、JSON校验和实际转会合同/双方账目均接通。规则和限制见 CAREER_TRANSFER_MARKET.md。
+- 验证：转会市场7项、职业旅程15项、升级7项专项通过；旧邀请兼容脚本通过；浏览器2项走通新旧生涯、豪门报价、刷新、手机和真实跨季成交；构建通过。优异表现不是豪门必签，预算不足会明确显示。既有身份工程阻塞仍保留，不声称全库通过。
+
+- CAREER-03（2026-10-19）：职业排阵和竞争评估复用 squadPlayers，合并首发与注册名单、按 ID 去重，过滤缺失人物、其他球队、自由及退役球员。同位置替代者不足时主角改首发，机会说明同步显示原因；排阵成功前不写入部分首发或改变安排。确实缺人时提示门将/后卫/中场/前锋具体缺口。未增加位置兼任、生成新球员或批量修存档。
+- 本轮实际验证：career-journey.test.mjs 15/15（新增唯一前锋、名单不同步及缺门将三个回归；唯一前锋样本同时跑实际长期模拟，验证身份、外观、单次出场和旅程累计）；长期模拟入口浏览器专项1/1；npm run build通过。最终机会说明调整后重新运行15项专项和构建；未重跑全库或用用户真实存档验证。
+
+- MyCareer 顶部新增 sticky“长期模拟”入口；职业阶段和旧生涯可用，青训阶段提示签约后开放。修复专业旅程仍有 journey 字段导致详细模拟面板隐藏的问题。
+- 长期模拟接入旅程首发/替补安排与 finishJourneyMatch，不再让新人一直无出场且 clubGames 不增长；修复未出场、lastMatch 为空时新闻生成报错。顶部目标为本赛季，自动安排阵容，普通队友诉求不打断；国家队窗口、颁奖、赛季边界仍停下。可手动停止，逐场保存。
+- 联赛完结且无下一场玩家欧冠时，后台结算其他球队剩余杯赛；仍有玩家杯赛时保留其比赛。打开旧的已完联赛存档时补处理，恢复进入休赛期的按钮。
+- **上一轮实际通过**：`npm run build`；`node --test career-journey.test.mjs career-upgrade.test.mjs`（19/19）；两个专项浏览器用例“顶部长期模拟入口逐场保存并可停止”和“无欧冠资格…旧档也能补结算”分别通过。
+- 浏览器第二项验证范围为旧档补结算、完成颁奖、打开“选择下一段旅程”后出现“留队并进入休赛期”。未在该新增用例内继续点击生成新赛季。用户真实存档、所有国家和长时间连续多赛季未在这轮重新验收。
+- 这些证据来自上一轮工具执行；本轮仅核对文档和代码入口，未重新运行上述测试。历史全套通过记录不表示当前全库通过。
+
+### 当前首要未完成事项
+
+- **统一身份基础阶段未完成验收**：PLAYER_IDENTITY_FOUNDATION.md 中列出入口、权威来源、操作契约和只读检查器；不代表已完成数据库迁移或全系统单一来源。
+- **ID-02 收尾通过，待 Codex 复审**：第一轮修复受益队/`ownGoal`；第二轮补齐 R1（头球/倒钩/对方来球/换人来源）与 R2（缺 `teamIds` 的兼容报告）；第三轮补齐 R3（换人后传中完成统计归原人）与 R4（国家队履历报告复用导入校验）。种子 17、36 保留。该状态不等于全库通过，也未提交或发布。
+- 阶段 A 的入口清单与权威来源表继续有效；当前身份/事件/资料专项以本轮实际运行的 199 项 Node 专项、`test.mjs`、整季回归和新增浏览器链为准，不再引用旧“13 项中 11 通过”记录。
+- ID-02 剩余风险：AI 在危险状态下仍会选择贴近本方球门线的身后出球点，120 场固定样本出现 4 次回传乌龙（3.3%）。本轮按“不改比赛概率”未改出球决策，建议单列 ID-04；动态进球回放的播放/镜头/暂停未验收；完整 Playwright 套件、全库回归和真实用户存档体验仍未验证。
+- **ID-03 第一阶段已在本机实现并完成 R5/R6 修复，待 Codex 复审**：姓名/外观/能力以主档为权威，个性化与 God Mode 走统一写入口，训练/比赛/跨季成长走显式提交；旧副本不能再在普通 prepare/open/save 时反向覆盖。个性化号码冲突由专用业务命令先校验再原子改号，页面显示真实结果；门将综合分项先规范化再校验。跨标签页冲突与物理存储尚未开始。
+- **MATCH-LEDGER-01 P0 R7–R16 已整改待复审，G1–G6 未开始**：R7 固定赛前身份、R8 完整结算事实、R9 整轮提交与保存失败重试、R10 历史收据、R11 导入校验、R12 履历逐字段、R13 真实职业上下文、R14 统一推进保护、R15 事件/bicycles 比较、R16 旧 8 位收据兼容。14 项结算、7 项履历、13 项资料专项，test.mjs、整季、构建及 4 项浏览器通过；`appearance-studio-render` 20/24 仍失败且精灵文件在本轮前已有未提交修改，单列待查。完整 Playwright、真实存档、多标签并发和五季性能仍未验证；未提交/发布。详见 MATCH_LEDGER.md。
+- 当前没有失败的本轮专项；但完整 Playwright 套件和全库/真实存档 QA 未跑，因此不能声称当前 `npm test` 全通过或直接发布。所有待办和负责人以 TASKS.md 为准。
+
+### 每轮交接
+
+先检查 git status 和本节版本，领取一个明确任务。完成后记录修改范围、实际验证、失败与下一步；在本节更新当前状态，旧日志保留。提交/推送/发布需明确任务授权；当前不会因增加协作助手而自动发生。
+
+更新日期：2026-10-19。此文档供同一 Codex 项目中的新对话直接接手使用。线上状态和 Git 提交可能晚于本地工作区；每次开始前核对 Git 状态和存档版本，不要把过往计划当成已实现功能。
+
+
+## 2026-10-19 ID-02 进球受益队与乌龙球归属（第一轮原始记录；R1/R2 补充见下方）
+
+- 阶段 A 复核：当前 `node --test identity-audit.test.mjs player-matching.test.mjs world-player-identity.test.mjs` 为 28/28 通过；文档中“13 项中 11 项通过”的旧记录不再代表当前代码。失败只保留为可复现的 ID-02 语义问题，不是审计器随机失败。
+- ID-02 复现：固定 xorshift 种子 17、36 可稳定出现中国队后卫在自家门前的回传直接进入本方球门；旧事件记 `team=0`（动作方）而比分归黎巴嫩（受益队 1）。120 场固定种子样本中 4 场出现同类回传乌龙。
+- 根因：`engine.mjs:goal()` 用 `eventRecord` 的动作方球队写 `team`，动作方与受益队共用一个字段，且没有乌龙球标记。比赛比分、个人统计、事件三者因此无法用同一语义对账。
+- 修复：进球事件改为 `team=受益队索引`、`playerId=最后触球者`，乌龙球带 `ownGoal:true`；个人进球只记给受益队球员，乌龙球不记动作者进球，也不触发其庆祝。`result-info.mjs` 透出 `ownGoal`；赛后总结、结果详情、杯赛列表和新闻加“乌龙球”标注；`save-slots.mjs` 的球员进球/比分校验允许显式乌龙球。正常进球数值、主客场顺序和比赛概率未改。
+- 验证：新增 `event-attribution.test.mjs` 4项（正常进球、乌龙球、种子17国家队全链、实战俱乐部存档往返）通过；整套 Node 专项 164/164 通过（含身份、国家队、职业旅程、升级、结果展示、新闻、事件模拟、战术、外观）；`node season-loop.test.mjs` 全季对账通过；`npm run build` 通过，`dist/app.js` 含新语义；`http://127.0.0.1:4177/` 返回 200。**`node test.mjs` 当时在第 101 行失败**（旧 `names` 缓存断言与身份表优先冲突）；该问题已在下方第二轮修正并通过，以上保留为第一轮原始记录。Playwright 当时未跑；未在浏览器里实际看到乌龙球画面，未读取或改写用户真实存档。
+- 遗留：本方回传乌龙的 AI 出球选择仍会产生（4/120），本轮按“不改比赛概率”要求未处理；建议单列任务评估“禁区内回传保护”。全量人物数据库迁移、主角镜像收敛、统一结算防重仍未开始。
+
+
+## 2026-10-19 ID-02 补充验收 R1/R2（本地，未提交）
+
+- 依据：Codex 审查 `DEEPSEEK_REVIEW_20261019.md`。R1 已复现：3号传中、5号头球，事件ID仍是传中者、姓名却是5号、个人进球记5号。根因：`aerial()` 更新 `ball.source`/`lastStriker` 但未同步 `ball.sourcePlayerId`，`goal()` 优先采用旧的 `sourcePlayerId`。修复：空中触球写回动作人ID，保留换人前出球由原人承担助攻/传球来源。
+- R2 已复现：缺少 `report.teamIds` 的乌龙报告，`resultGoalEvents` 先取动作方参赛行球队，导致受益队错成动作方。修复：显式 `ownGoal` 优先按 `report.teams[side]` 与当场双方标签匹配；标签缺失或无法确认时保留未知，不再退回动作方或当前俱乐部。正常进球仍沿用原回退。
+- 导入语义：`ownGoal` 只接受布尔值；报告有完整 `teamIds`/槽位时，乌龙动作方与受益队必须不同；结果级 `goalEvents` 有参赛行时同样校验。乌龙不能同时计入普通个人进球；点球大战仍只走 `shotOutcome`，不写比分、进球事件或个人进球。
+- 展示：赛后总结、赛程详情、新闻已标“乌龙球”；比赛复盘的进球高光现在同时显示受益队、号码、乌龙标记和动作人姓名；进球回放元数据保留动作人但不触发其正常庆祝。
+- 旧姓名测试：`test.mjs` 改为人物主档姓名优先（`season.names` 保留旧缓存值），并新增“只有缺少主档时缓存才作回退”的独立断言；没有回退生产规则。
+- 验证：`event-attribution.test.mjs` 19项通过（含种子17全链、R1 四项、R2 三项、导入六项、点球大战、回放元数据）；整套 Node 专项 183/183；`node test.mjs` 通过；`node season-loop.test.mjs` 通过；`npm run build` 通过；`browser-tests/own-goal-id02.spec.mjs` 1/1 通过，截图 `test-results/own-goal-desktop.png`。未跑完整 Playwright 套件，未用真实用户存档，未提交/推送/部署。
+- 残余：R1 修复只影响空中触球后的动作人字段，不改射门概率；R2 对完全无证据的历史报告保留未知，UI 不会把该进球归到任一方。ID-04 回传AI、ID-03 双写收敛、全量迁移仍未开始。
+
+
+## 2026-10-19 ID-02 第三轮 R3/R4（本地，未提交）
+
+- R3 根因：`engine.mjs:aerial()` 的完成传中分支写 `this.stats[b.source]`（槽位）。换人后该槽位已指向新上场者，导致下场者的完成传球/完成传中/向前传球记到替补，而助攻与关键传球因走 `statLine` 仍归旧人。修复：完成传中三字段改用 `statLine(b.source,b.sourcePlayerId)`；头球者的新 `sourcePlayerId` 仍在旧传中统计之后写入。测试同时核对旧人的传球/传中尝试与成功、向前传球、关键传球、助攻，以及替补在未触球时全为0。
+- R4 根因：`validNationalCareer` 校验国家队履历外层字段，却没有校验内部 `report`；俱乐部 results 与职业 history 的 `report` 校验无法覆盖国家队。修复：在职业存档校验中复用同一 `report` 结构与事件语义校验，覆盖 `nationalCareer.history[].report`，不把国家队ID当俱乐部ID。新增显式乌龙报告的人物成员、逐球受益侧与 `report.score` 对账；非布尔/同队/非法人物/非法事件类型/错误受益侧/错误比分均拒绝。`report` 缺失或旧缺字段报告仍可导出恢复。
+- 验证：`event-attribution.test.mjs` 21/21（新增 R3、R4 反例）；整套 Node 专项 185/185；`node test.mjs` 通过；`node season-loop.test.mjs` 通过；`npm run build` 通过。浏览器 `own-goal-id02.spec.mjs` 1/1 仍为生成数据、静态复盘与刷新恢复；**没有实际播放动态进球回放**（播放、镜头切换、暂停未验收），回放元数据只有单元测试。
+- 边界：未改回传AI、比赛概率、评分、抽卡；未迁移、重编号、修复真实存档；未跑完整 Playwright；未提交/推送/部署。
+
+
+## 2026-10-19 ID-03 第一阶段：当前资料写入口与 MyCareer 兼容（本地，未提交）
+
+- 写入者盘点：个性化 `src.jsx:customizePlayer`（姓名/号码/外观/踢法）；God Mode `god-mode.mjs:editPlayer`（姓名/号码/能力/年龄/潜力/队伍/位置）；训练 `career-journey.mjs:trainJourney`；比赛成长 `finishJourneyMatch`；跨季成长 `aging.mjs:advanceSeasonAges`；建人 `createCareerPlayer` + `prepareSeason`；旧档恢复/普通 prepare/open/save。
+- 权威方向：已有主档时，`season.playerData[playerId]` 的姓名、外观、能力、年龄、潜力、训练重点为当前资料权威；`career` 对象是兼容镜像与职业业务数据。普通 `prepareSeason` / `carryIdentity` 不再把过期副本写回主档，而是主档→副本同步；只有新主角首次注册、主档确实缺字段时才由副本补。历史比赛快照、号码/国家队号码、旅程、XP、统计、故事字段不在此入口内。
+- 统一写入口：`identity.mjs:updatePlayerProfile(season,playerId,patch,{career})`。按稳定ID定位；只允许资料字段；姓名/号码/外观/能力/年龄/潜力/训练重点先完整校验再原子写入；失败不留下部分修改；成功后镜像到 `career`。个性化与 God Mode 均调用它，God Mode 的队伍/位置/名单交换仍走原逻辑。
+- 成长提交：`identity.mjs:commitCareerGrowth(season,career,previous)` 只把本轮相对 `previous` 实际变化的能力字段与训练重点写回主档，不用整份旧副本覆盖主档其他新编辑；`trainJourney`、`finishJourneyMatch`、长期模拟和年度训练重点接入显式提交。赛后 level/XP 等职业字段仍只存在于 career，不伪装成资料字段；跨季 `advanceSeasonAges` 继续以主档为源并镜像。
+- 验证：新增 `player-profile-authority.test.mjs` 9项（旧副本反向覆盖、统一入口/同名/原子性、God Mode、训练成长、比赛成长、新主角初始化、跨季、旧档缺字段）；199项 Node 专项、`node test.mjs`、`node season-loop.test.mjs`、`npm run build` 通过。浏览器 `player-profile-authority.spec.mjs` 1/1：主档新资料+旧副本加载 → 个性化改名 → 刷新 → 国家队页 → 返回并进入比赛；职业旅程4项、国家队3项、世界身份1项、外观2项浏览器回归通过。
+- 未验证：完整 Playwright 套件、真实用户存档、跨标签页并发冲突、统一结算幂等、物理存储拆分；未做全量统计重算、旧ID重编号、同名人合并、回传AI调整；未提交/推送/部署。
+
+
+## 2026-10-19 比赛内模拟窗口与国家队方案（本地，未发布）
+
+- `LiveSimulationWindow` 共用现有比赛动作引擎，可在快速赛、俱乐部/MyCareer、青训、Dream Squad 和训练中开启；模拟速度 1/2/4/8 倍、半场/终场推进、暂停与实时比赛画面共用原始结算统计。
+- 青训比赛与未签约热身新增“模拟这场比赛”。MyCareer 模拟替补首秀保留实际上场分钟。接管恢复手动控制；模拟中的比赛页切换受阻，避免后台比赛推进后丢失控制。
+- 所有正式比赛中场会暂停，并使用模拟窗自身控件继续，防止原暂停层挡住窗口。点球大战模拟模式自动结算；手动模式保留原点球操作。
+- `NATIONAL_SELECTION_DESIGN.md` 是完整的国家队入选评估开发规范，涵盖阶段、样本与分钟口径、分项竞争力、六人制名单配额、中国/阿根廷差异、国际窗口、名单锁定、叙事、开发顺序和验收。未接入征召/赛程。
+- 本轮新增 3 项模拟单元测试通过，国家队与生涯相关单元也通过。最后一轮 5 项重点浏览器回归全部通过（青训中场/终场与一次性结算、训练模拟、职业替补分钟、联赛事件模拟、欧冠模拟）；之前国家队页面与存档浏览器检查通过。手机模拟窗口已目视检查，像素球场保留原样。未执行完整全库回归，未部署。
+
+## 2026-10-19 国家队初步接入（本地，未发布）
+
+- `national-team.mjs` 提供中国、阿根廷、法国、日本、摩洛哥、新西兰六队的初始游戏画像和分位置竞争参考。参考值不是现实球队评分或正式名单，不参与现有比赛强度、球员潜力或俱乐部属性计算。
+- 创建生涯增加“国家”独立步骤，默认中国，可在确认开始前修改；生涯页增加“国家队”导航。没有 journey 的旧生涯使用 `SeasonWorkspace` 的 `nationalPanel` 插槽，不能直接在其 children 外插入第二个根节点。
+- 可选身份存为 `player.international={version:1,nationId}`，旧档保留未选择状态，可保存补选；保存成功后再更新界面，失败可重试。存档校验拒绝非法 ID/版本和伪造字段，备份往返保留身份。
+- 国家队页面展示最近五场职业比赛、分钟、评分和位置能力形成的竞争评估；青年赛不作为成年国家队证据。俱乐部比赛结算后评估自动读取新记录。尚无正式征召、国家队比赛、赛历、参赛名单与大赛，不应宣称已入选或已产生国家队数据。
+- 构建、21 项国家队/生涯/升级专项测试、10 项创建/旧档/失败重试/外观浏览器测试通过；桌面选择页与手机选择/档案画面已查看。没有重跑全赛季回归，未部署公开网页。
+
+## 2026-10-17 转身与出脚衔接（本地，未发布）
+
+- 新增 `player-motion.mjs`：身体朝向按最短角度短暂过渡，绘制方向和移动输入分开；出脚前段保持真实出球方向。玩家实际移动、出球响应和球速未加入等待。
+- `release` 记录真实离脚点、出球方向及当时球员位置；地面传射使用独立的支撑腿、触球脚与收腿表现。头球和倒钩继续走原有空中动作。快速出球与高力量射门使用不同触球保持时间。
+- 正面各动作帧复用站立基准锚点，减少因最低像素变化引起的整体跳动；回放保留动作数据，并使用最短角度插值，兼容没有新字段的旧帧。
+- 构建、49 项相关专项测试、独立回放检查、12 项外观/纪事/比赛控制浏览器检查通过；查看了连续动作图与桌面/手机比赛画面。未重跑本轮全赛季测试，未公开部署。
+
+## 2026-10-17 共用背面人物更新（本地，未发布）
+
+- 新增 `rear-sprite.mjs`：独立像素背面身体、稳定脚底锚点、走路/跑步/动作/庆祝姿态；入场单独使用小步幅走路循环。后脑、后颈、长发/光头/马尾等由 `studio-head.mjs` 的背面分支绘制，正面继续使用原有素材。
+- 共用 `drawSprite` 接入背面身体与像素背号。背号跟随躯干，不随水平翻转变成镜像；比赛不再叠加第二份背号。方向使用保持区间减少正背面临界闪切。
+- 外观预览、比赛、回放与入场复用同一背面绘制。保留肤色、发色、号码、体型、球衣、长袖、护腕、袜色与球鞋色配置。
+- 构建、45 项相关专项测试、11 项外观/纪事/比赛控制浏览器测试通过。查看了动作帧整图与桌面/手机入场截图；没有执行新一轮全赛季测试，也没有公开部署。
+
+## 2026-10-17 像素入场精修（本地，未发布）
+
+- 通道入场由 10 秒缩至 3.2 秒，取消中间停步，持续走向球场；启动兜底 4.2 秒，减少动态效果模式 0.9 秒后开赛。比赛计时在入场中冻结，可随时跳过。
+- 保留原生像素人物，增加两队实际球衣配色、号码和外观，补足阶梯看台、灯带、队旗、砖缝、像素地面透视与脚下阴影。脚步声随新节奏调整。
+- 签约、颁奖时长未变。时间线专项与纪事/比赛控制浏览器检查通过，包含自动开赛、跳过、减少动态效果；桌面与手机截图已人工查看。
+
+## 2026-10-17 比赛细节升级（本地，未发布）
+
+验证：本轮构建、完整 npm test 通过，含 79 项专项测试、赛季与存档回归、58 项浏览器测试。
+
+- 共用实操引擎的持球偏移改为按时间连续收敛，降低急转、冲刺启停及护球位置变化造成的跳动；未改变像素素材。
+- 边路接应侧在当前配合中保持稳定，重新获得球权时清除旧的角色分配与前插目标；成功滑铲保留恢复，恢复中不能再次抢断；队友响应要球前检查停球与恢复状态。
+- 来球距离不超过 32、朝接球者运动且为本方低平传球时，可提前按传球，保留 0.12 秒，在接球后执行一次。俱乐部支持原传球者为明确的目标接球者预输入；MyCareer 保持固定身份。保留鼠标落点与直塞意图。
+- 预输入超时、其他球员抢到球、手动切人、改按射门、重新开球、暂停或窗口失焦时取消，避免恢复后误出球。操作栏有一脚出球提示。
+- 新增操作回归覆盖连续持球、接应侧、滑铲恢复、要球停球、脚下/指向/直塞预输入、超时与取消。自动检查不代替人工手感验收；没有修改玩家存档或公开部署。
 
 ## 2026-10-14 Dream Squad 全卡能力画像与模拟校准 v3（本地）
 
@@ -307,3 +454,7 @@
 - Final score bands: 45–98; legend 128, elite 91, gold 726, silver 736. World Scout 90+/85+ base odds remain 0.1%/1.5%. Historic-only pools no longer contain artificial silver versions.
 - Validation: model/catalog/signing suites and production build pass; full Node/season regression passed (240 primary, 960 world, 53 cup matches). Full browser run initially 32/34; corrected related obsolete odds assertion and reran Dream Squad/signing 12/12. The unrelated large season-restore browser case exceeded its old 60s total test budget, then passed alone at 120s without business changes. Workbook export reread matches all 1,681 ratings and 23 abilities per row, all 308 comparisons and 3,362 score/tier formulas; input-edit recalculation and rendered views checked.
 - User-facing workbook and report: `C:/Users/何厚臻/Documents/Codex/2026-10-14/wo/outputs/dream-squad-rebuilt/`. Preview cache key: `dream-catalog-reconstruction-20261014-v4`. No commit, push or deployment performed; keep existing unrelated working changes.
+
+
+
+

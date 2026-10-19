@@ -1,10 +1,11 @@
+import {nationalClubReturn} from './national-progression.mjs';
 import {sceneIdentity,validSceneIdentity} from './football-chronicle.mjs';
 import {LEAGUES,getTeam,getLeague,createSeason,prepareSeason} from './league.mjs';
 import {generateProspect,teamName} from './identity.mjs';
 import {ensureRatings,positionRating} from './ratings.mjs';
 import {playerRating} from './career.mjs';
 import {positionContribution} from './career-role.mjs';
-import {positionGroup} from './football-life.mjs';
+import {positionGroup,squadPlayers} from './football-life.mjs';
 import {nextCalendarFixture} from './calendar.mjs';
 import {prepareFixtureTeams,recoveryAt} from './recovery.mjs';
 import {careerDeal} from './player-value.mjs';
@@ -39,7 +40,8 @@ export function createYouthMatch(p,s,difficulty=1,duration=180){
   m.colors=[getTeam(s.teamId).color??'#85c9ed','#d2a66e'];m.journeyYouth=true;m.journeyFixture=f;m.journeyIntro=f.title;return m;
 }
 export function finishYouthMatch(p,m){
-  const next=clone(p),j=next.journey,stat=m.stats[m.careerIndex],rating=+playerRating(stat,m.score,p.position).toFixed(1),report=m.report();delete report.heat;
+  const next=clone(p),j=next.journey;const youthIndex=m.journeyFixture?.index;if(Number.isInteger(youthIndex)&&j.youthResults?.[youthIndex])return next;
+  const stat=m.stats[m.careerIndex],rating=+playerRating(stat,m.score,p.position).toFixed(1),report=m.report();delete report.heat;
   const row={title:m.journeyFixture.title,opponent:m.teams[1],score:[...m.score],rating,goals:stat.goals,assists:stat.assists,passesCompleted:stat.passesCompleted,tackles:stat.tackles,report};j.youthResults.push(row);j.played++;next.trainingPoints++;
   const contribution=positionContribution(stat,p.position);j.trust=clamp(j.trust+(rating-6)*3+contribution);
   j.lastFeedback=stat.turnovers>=3?'受压时丢球偏多。下一次可以先观察接应，也可以练习护球。':contribution>0?`教练记下了你的${p.position==='forward'?'进攻贡献':p.position==='midfielder'?'传递和组织':'防守贡献'}。继续把这些动作稳定地踢出来。`:'教练还在观察你。保持跑位和接应，下一场仍然有机会。';
@@ -63,13 +65,14 @@ export function signFirstContract(p,s,teamId){
   remember(j,'第一份职业合同',`${offer.teamName}。${offer.role}，两年合同。${offer.rationale}`,'milestone',{scene:sceneIdentity(next,world)});prepareSeason(world,next);return {season:world,player:next};
 }
 export function journeyOpportunity(p,s){
-  if(!p?.journey||p.journey.stage!=='professional')return null;const j=p.journey,candidates=(s.squadIds[s.teamId]??s.rosterIds[s.teamId]).map(id=>s.playerData[id]).filter(q=>q.id!==p.id&&positionGroup(q.position)===positionGroup(p.index)&&!q.retired&&!q.freeAgent),rival=candidates.sort((a,b)=>positionRating(b)-positionRating(a))[0],gap=quality(p)-(rival?positionRating(rival,p.index):quality(p)),recent=(p.history??[]).slice(-4),form=recent.length?recent.reduce((n,r)=>n+r.rating,0)/recent.length:6,readiness=recoveryAt(s.playerData[p.id],nextCalendarFixture(s)?.date??s.calendar.currentDate??`${s.calendar.startYear}-08-01`).readiness;
-  const starter=j.clubGames>=2&&readiness>.55&&(j.trust>=57||gap>=-4&&form>=6.7),minuteOn=starter?0:readiness<.55?70:j.clubGames<2?60:j.trust>=45?45:65;
-  return {starter,minuteOn,role:starter?'首发机会':`替补 · 预计 ${minuteOn}′ 登场`,rival:rival?.name??'同位置队友',reason:readiness<.55?'身体尚未完全恢复。教练准备让你在后半场登场。':j.clubGames<2?'职业起步，先在下半场争取下一次机会。':starter?'近期贡献与训练表现赢得了这次首发。':`教练仍在比较你与${rival?.name??'同位置队友'}。下半场依然有证明自己的时间。`};
+  if(!p?.journey||p.journey.stage!=='professional')return null;const j=p.journey,candidates=squadPlayers(s,s.teamId).filter(q=>q.id!==p.id&&positionGroup(q.position)===positionGroup(p.index)),rival=candidates.sort((a,b)=>positionRating(b)-positionRating(a))[0],gap=quality(p)-(rival?positionRating(rival,p.index):quality(p)),recent=(p.history??[]).slice(-4),form=recent.length?recent.reduce((n,r)=>n+r.rating,0)/recent.length:6,readiness=recoveryAt(s.playerData[p.id],nextCalendarFixture(s)?.date??s.calendar.currentDate??`${s.calendar.startYear}-08-01`).readiness;
+  const nationalReturn=nationalClubReturn(p,s),group=positionGroup(p.index),shortage=candidates.length<(group===1||group===3?2:1);const starter=shortage||!nationalReturn?.rotate&&j.clubGames>=2&&readiness>.55&&(j.trust>=57||gap>=-4&&form>=6.7),minuteOn=starter?0:nationalReturn?.rotate?65:readiness<.55?70:j.clubGames<2?60:j.trust>=45?45:65;
+  return {starter,minuteOn,role:starter?'首发机会':`替补 · 预计 ${minuteOn}′ 登场`,rival:rival?.name??'同位置队友',reason:shortage?'同位置人手不足，教练安排你首发。':nationalReturn?.rotate?nationalReturn.message:readiness<.55?'身体尚未完全恢复。教练准备让你在后半场登场。':j.clubGames<2?'职业起步，先在下半场争取下一次机会。':starter?'近期贡献与训练表现赢得了这次首发。':`教练仍在比较你与${rival?.name??'同位置队友'}。下半场依然有证明自己的时间。`};
 }
 export function prepareJourneyLineup(s,p,opportunity){
-  const all=(s.squadIds[s.teamId]??s.rosterIds[s.teamId]).map(id=>s.playerData[id]).filter(q=>q.id!==p.id&&!q.retired&&!q.freeAgent),used=new Set(),lineup=[];
-  for(let slot=0;slot<6;slot++){if(opportunity.starter&&slot===p.index){lineup.push(p.id);used.add(p.id);continue}const q=all.filter(q=>!used.has(q.id)&&positionGroup(q.position)===positionGroup(slot)).sort((a,b)=>positionRating(b,slot)-positionRating(a,slot))[0];if(!q)throw new Error('球队缺少可用的位置球员');lineup.push(q.id);used.add(q.id)}
+  const squad=squadPlayers(s,s.teamId),all=squad.filter(q=>q.id!==p.id),used=new Set(),lineup=[],group=positionGroup(p.index),required=group===1||group===3?2:1,forcedStarter=!opportunity.starter&&squad.some(q=>q.id===p.id)&&all.filter(q=>positionGroup(q.position)===group).length<required,starter=opportunity.starter||forcedStarter;
+  for(let slot=0;slot<6;slot++){if(starter&&slot===p.index){if(!squad.some(q=>q.id===p.id))throw new Error('主角未在本队可用名单中，请检查注册状态');lineup.push(p.id);used.add(p.id);continue}const q=all.filter(q=>!used.has(q.id)&&positionGroup(q.position)===positionGroup(slot)).sort((a,b)=>positionRating(b,slot)-positionRating(a,slot))[0];if(!q)throw new Error(`球队缺少可用${{0:'门将',1:'后卫',3:'中场',5:'前锋'}[positionGroup(slot)]}，请检查球队名单与注册状态`);lineup.push(q.id);used.add(q.id)}
+  if(forcedStarter)Object.assign(opportunity,{starter:true,minuteOn:0,role:'首发机会',reason:'同位置人手不足，教练安排你首发。'});
   s.rosterIds[s.teamId]=lineup;for(let i=0;i<6;i++)delete s.names?.[`${s.teamId}:${i}`];return lineup;
 }
 export function enterJourneyMatch(m,p,s,opportunity){
@@ -79,9 +82,9 @@ export function enterJourneyMatch(m,p,s,opportunity){
   while(m.time<until&&m.state==='playing'&&steps++<20000){m.wait=0;m.selected[0]=-1;m.step(.04)}
   const slot=m.active(p.index)?p.index:m.players.findIndex((q,id)=>q.t===0&&positionGroup(q.i)===positionGroup(p.index)&&m.active(id));
   if(slot<0)throw new Error('本场该位置已经被罚下，无法替补');
-  m.substitutedOut={playerId:m.playerIds[slot],stats:clone(m.stats[slot]),index:slot,minuteOff:Math.round(m.time/m.duration*90),shirtNumber:m.playerNumbers[slot]};
+  m.substitutedOut={playerName:m.playerNames?.[slot],playerId:m.playerIds[slot],stats:clone(m.stats[slot]),index:slot,minuteOff:Math.round(m.time/m.duration*90),shirtNumber:m.playerNumbers[slot]};
   for(const shot of m.shotLog){shot.playerId=m.playerIds[shot.player];shot.shirtNumber=m.playerNumbers[shot.player]}for(const e of m.matchEvents){e.playerId=m.playerIds[e.player];e.shirtNumber=m.playerNumbers[e.player]}
-  m.stats[slot]=Object.fromEntries(Object.keys(m.stats[slot]).map(key=>[key,0]));m.heat[slot]=m.heat[slot].map(row=>row.map(()=>0));m.playerIds[slot]=p.id;m.playerAttributes[slot]=clone(p.attributes);m.playerNumbers[slot]=p.number;m.careerIndex=slot;m.careerAttributes=clone(p.attributes);m.careerNumber=p.number;m.careerLook=p.appearance;m.careerStyle=p.style;m.selected[0]=slot;
+  m.stats[slot]=Object.fromEntries(Object.keys(m.stats[slot]).map(key=>[key,0]));m.heat[slot]=m.heat[slot].map(row=>row.map(()=>0));m.playerIds[slot]=p.id;if(m.playerNames)m.playerNames[slot]=p.name;m.playerAttributes[slot]=clone(p.attributes);if(m.playerLooks)m.playerLooks[slot]=clone(p.appearance);m.playerNumbers[slot]=p.number;m.careerIndex=slot;m.careerAttributes=clone(p.attributes);m.careerNumber=p.number;m.careerLook=clone(p.appearance);m.careerStyle=p.style;m.selected[0]=slot;
   const body=m.players[slot];body.stamina=recoveryAt(s.playerData[p.id],nextCalendarFixture(s)?.date).readiness;body.cool=.1;body.aiKick=null;body.tackleRecovery=0;body.tackleTarget=null;body.tackleWindup=0;body.settle=0;
   m.wait=0;m.goalReplay=null;m.pendingShot=null;m.passRequest=null;m.requestFeedback=null;m.charge=0;m.objective={...m.objective,target:Math.max(1,Math.ceil(m.objective.target*(90-m.substitutedOut.minuteOff)/90))};m.journeyIntro=`${m.substitutedOut.minuteOff}′，轮到你了`;m.announce(`替补登场 · 当前比分 ${m.score.join(' : ')}`);return m;
 }

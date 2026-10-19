@@ -20,3 +20,10 @@ test('交互比赛在半场冻结并保留真实数据，调整战术不移动�
 test('重逢使用当前注册球员，决赛优先，青训旧队也可重逢',()=>{const s=createSeason('england','arsenal',41),mate=s.squadIds.chelsea[3],p={journey:{clubs:['arsenal'],homeTeamId:'arsenal',cast:{partnerId:mate}}};assert.equal(matchChronicle(s,'chelsea','league',p).title,'熟悉的人，新的对手');s.squadIds.chelsea=s.squadIds.chelsea.filter(id=>id!==mate);assert.equal(matchChronicle(s,'chelsea','league',p).title,'把这一场踢好');p.journey.homeTeamId='chelsea';assert.equal(matchChronicle(s,'chelsea','league',p).title,'重返熟悉的球场');s.cup={phase:'final',results:[]};assert.equal(matchChronicle(s,'chelsea','cup',p).title,'今晚，争取属于我们的奖杯')});
 
 test('模拟半场战术事件与真实观察相符并保留中场事件',()=>{const s=createSeason('england','arsenal',41),m=new EventMatch({season:s,home:'arsenal',away:'chelsea'});m.attackChannels[0]=[0,6,0];m.clock=2699;while(m.half===1)m.step();assert.equal(m.clock,2700);assert.equal(m.half,2);assert.equal(m.adaptations[1].type,'screen');assert(m.events.some(e=>e.type==='halftime'));assert(m.events.some(e=>e.type==='tactic'&&e.text===m.adaptations[1].note));assert.equal(m.lastEvent.type,'tactic')});
+
+
+test('入场三秒多连续前进，不再有中段停步，其他场景时长保持',()=>{
+ assert.equal(SCENE_LENGTH.tunnel,3.2);assert.equal(SCENE_LENGTH.contract,9);assert.equal(SCENE_LENGTH.award,11);
+ let previous=-1;for(let t=0;t<=3.2;t+=.1){const frame=sceneFrame('tunnel',t);assert(frame.exit>=previous);previous=frame.exit}
+ assert(sceneFrame('tunnel',1).exit>0);assert(sceneFrame('tunnel',2).exit>sceneFrame('tunnel',1).exit);assert.equal(sceneFrame('tunnel',3.2).exit,1);
+});

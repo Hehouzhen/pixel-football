@@ -24,10 +24,21 @@ for(const careerMode of [false,true])test(`中场休息冻结比赛并可调整�
 
 test('三套精细场景可放映、暂停和逐帧检查，桌面手机均可用',async({page})=>{
  const errors=[];page.on('pageerror',e=>errors.push(e.message));await page.goto('/');await page.getByRole('button',{name:'足球纪事',exact:true}).click();
- for(const [button,type,at] of [['夜场入场','tunnel','5'],['合同签约','contract','3'],['冠军捧杯','award','7']]){
+ for(const [button,type,at] of [['夜场入场','tunnel','1.6'],['合同签约','contract','3'],['冠军捧杯','award','7']]){
   await page.getByRole('button',{name:button,exact:true}).click();const scene=page.locator('.cinematic-scene');await expect(scene).toHaveAttribute('data-ready','true');await scene.getByRole('slider').fill(at);await expect(scene.getByRole('button',{name:'播放场景动画'})).toBeEnabled();await page.screenshot({path:`test-results/chronicle-${type}-desktop.png`,fullPage:true});
   const paused=await scene.getByRole('slider').inputValue();await page.waitForTimeout(180);expect(await scene.getByRole('slider').inputValue()).toBe(paused);
   await page.setViewportSize({width:390,height:844});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);await page.screenshot({path:`test-results/chronicle-${type}-mobile.png`,fullPage:true});await page.setViewportSize({width:1440,height:1000});
  }expect(errors).toEqual([]);
 });
 test('比赛入场动画保持计时冻结，跳过后正常开赛',async({page})=>{await page.goto('/');await page.getByRole('button',{name:'快速比赛',exact:true}).click();await page.getByRole('button',{name:/^开球/}).click();await page.getByRole('button',{name:'准备好了，开球 →'}).click();await expect(page.locator('.cinematic-cover')).toBeVisible();await expect(page.locator('.cinematic-cover')).toHaveAttribute('data-ready','true');await expect(page.locator('.shot-context')).toHaveCount(0);await page.getByRole('button',{name:'跳过动画 ▶'}).click();await expect(page.locator('.shot-context')).toBeVisible();await expect(page.locator('.cinematic-cover')).toHaveCount(0)});
+
+
+test('入场缩短后自动开赛，减少动态效果也不会卡在入场',async({page})=>{
+ for(const reducedMotion of ['no-preference','reduce']){
+  await page.emulateMedia({reducedMotion});await page.goto('/');
+  await page.getByRole('button',{name:'快速比赛',exact:true}).click();await page.getByRole('button',{name:/^开球/}).click();
+  await page.getByRole('button',{name:'准备好了，开球 →'}).click();await expect(page.locator('.cinematic-cover')).toBeVisible();
+  await expect(page.locator('.shot-context')).toHaveCount(0);
+  await expect(page.locator('.cinematic-cover')).toHaveCount(0,{timeout:5000});await expect(page.locator('.shot-context')).toBeVisible();
+ }
+});

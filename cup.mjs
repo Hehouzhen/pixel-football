@@ -1,7 +1,8 @@
 import {fixtureDate,leagueDate} from './schedule.mjs';
 import {recordLifeMatch} from './football-life.mjs';
-import {LEAGUES,getTeam,fixtures,standings,simulate,simulateFixture,orientStats,addPlayer,playerRows,prepareSeason,createMatchRecord} from './league.mjs';
+import {LEAGUES,getTeam,fixtures,standings,simulate,simulateFixture,orientStats,addPlayer,playerRows,prepareSeason,createMatchRecord,seasonRounds} from './league.mjs';
 import {teamName} from './identity.mjs';
+import {assertSettlementRetry,recordSettlement,matchIdentity} from './match-ledger.mjs';
 import {skillValue} from './ratings.mjs';
 
 const hash=s=>[...s].reduce((n,c)=>(n*31+c.charCodeAt(0))%100000,0),dice=seed=>{const x=Math.sin(seed*127.1+78.3)*43758.5453;return x-Math.floor(x)};
@@ -89,6 +90,9 @@ function playLegacyRound(season,userScore,matchStats,teamStats,shootout,report,s
 }
 
 function playRound(season,...args){return v2(season)?playV2Round(season,...args):playLegacyRound(season,...args)}
-export function advanceScheduledCup(season){while(season.cup?.phase!=='complete'&&!cupNextMatch(season)){const cup=season.cup;if(season.calendar?.dated&&fixtureDate(season,'cup',cup.round,cup.phase)>leagueDate(season.calendar.startYear??2026,season.week))break;playRound(season,null,null,null,null,null)}for(const result of season.cup?.results??[])recordLifeMatch(season,result,30)}
+export function advanceScheduledCup(season){while(season.cup&&season.cup.phase!=='complete'&&!cupNextMatch(season)){const cup=season.cup;if(season.calendar?.dated&&season.week<seasonRounds(season)&&fixtureDate(season,'cup',cup.round,cup.phase)>leagueDate(season.calendar.startYear??2026,season.week))break;playRound(season,null,null,null,null,null)}for(const result of season.cup?.results??[])recordLifeMatch(season,result,30);for(const result of season.cup?.results??[])recordSettlement(season,result,{userTeamId:season.teamId})}
 function settleCup(season){advanceScheduledCup(season)}
-export function completeCupMatch(season,score,matchStats,teamStats,shootout=null,report=null,simulation=null){const pair=cupNextMatch(season);if(!pair)throw new Error('No cup match to complete');if(cupNeedsShootout(season,score)&&!pair.includes(shootout?.winner))throw new Error('Shootout winner required');playRound(season,score,matchStats,teamStats,shootout,report,simulation);settleCup(season);for(const result of season.cup.results)recordLifeMatch(season,result,30);return season}
+function completeCupMatchRaw(season,score,matchStats,teamStats,shootout=null,report=null,simulation=null,options={}){if(options.matchId){if(assertSettlementRetry(season,options.matchId,{score,playerStats:simulation?.playerStats??null,stats:teamStats,penalties:shootout?.score,winner:shootout?.winner,events:simulation?.goalEvents??null}))return season;const target=cupNextMatch(season);if(score!==null&&target&&options.matchId!==matchIdentity(season,{competition:'cup',phase:season.cup.phase,round:season.cup.round,home:target[0],away:target[1]}))throw new Error('比赛编号与当前赛程不一致');}const pair=cupNextMatch(season);if(!pair)throw new Error('No cup match to complete');if(cupNeedsShootout(season,score)&&!pair.includes(shootout?.winner))throw new Error('Shootout winner required');playRound(season,score,matchStats,teamStats,shootout,report,simulation);settleCup(season);for(const result of season.cup.results)recordLifeMatch(season,result,30);for(const result of season.cup.results)recordSettlement(season,result,{userTeamId:season.teamId});return season}
+// Formal entry: a cup round (including automatically advanced matches) is settled
+// on a working copy and published only when the whole round succeeds.
+export function completeCupMatch(season,score,matchStats,teamStats,shootout=null,report=null,simulation=null,options={}){const working=structuredClone(season);completeCupMatchRaw(working,score,matchStats,teamStats,shootout,report,simulation,options);for(const key of Object.keys(season))if(!Object.hasOwn(working,key))delete season[key];Object.assign(season,working);return season}

@@ -1,8 +1,10 @@
+import {nationalExposure} from './national-progression.mjs';
 import {advanceClubRole,roleProgress} from './career-role.mjs';
 import {objectiveFor,milestones,STYLES} from './experience.mjs';
 import {LEAGUES} from './clubs.mjs';
 import {ensureRatings,positionRating} from './ratings.mjs';
 import {careerDeal} from './player-value.mjs';
+import {currentCareerMarket,careerMarketOffers} from './career-market.mjs';
 const POSITION={forward:{label:'前锋',index:5,primary:'shooting',attributes:{shooting:70,passing:58,defense:50,shielding:66,speed:74,firstTouch:70,endurance:67,aerial:72}},midfielder:{label:'中场',index:3,primary:'passing',attributes:{shooting:58,passing:70,defense:56,shielding:64,speed:68,firstTouch:72,endurance:74,aerial:55}},defender:{label:'后卫',index:1,primary:'defense',attributes:{shooting:52,passing:58,defense:70,shielding:60,speed:63,firstTouch:59,endurance:70,aerial:75}}};
 const FIELDS=['goals','assists','shots','shotsOnTarget','passes','passesCompleted','crosses','tackles','touches','fouls','yellows','reds','distance','possession','headers','bicycles','forwardPasses','interceptions','tackleAttempts','playingSeconds','keyPasses','blocks','turnovers','crossesCompleted','carryDistance','headerGoals','bicycleGoals','penaltyGoals','xG','xA','dribbles','dribblesCompleted','aerialDuels','aerialWon','keeperSpills'];
 const clamp=(value,min,max)=>Math.max(min,Math.min(max,value));
@@ -30,6 +32,7 @@ export function levelProgress(player){const target=Math.min(300,100+Math.max(0,p
 const roleRating=(attributes,position)=>positionRating({attributes,position:POSITION[position]?.index??5});
 const scheduleHash=text=>{let value=2166136261;for(const char of String(text)){value^=char.charCodeAt(0);value=Math.imul(value,16777619)}return value>>>0};
 export function careerTransferWindow(career,season){
+  if(season&&currentCareerMarket(career,season)){const currentSeason=(season.history?.length??0)+1;return {available:true,currentSeason,nextSeason:currentSeason,yearsUntil:0};}
   if(career?.journey){const currentSeason=(season?.history?.length??0)+1;return {available:career.journey.stage==='professional',currentSeason,nextSeason:currentSeason,yearsUntil:0};}
   const currentSeason=(season?.history?.length??0)+1,seed=career?.id??`${career?.name??'player'}:${career?.position??''}:${career?.number??0}`;
   let nextSeason=2+scheduleHash(seed)%3,cycle=1;
@@ -38,11 +41,13 @@ export function careerTransferWindow(career,season){
 }
 export function careerTransferOffers(career,season){
   const currentId=season?.teamId,index=career?.index;if(!career||!currentId||!Number.isInteger(index))return [];
+  if(currentCareerMarket(career,season))return careerMarketOffers(career,season);
   if(!careerTransferWindow(career,season).available)return [];
   const playerQuality=roleRating(career.attributes,career.position),seasonNumber=(season.history?.length??0)+1,seasonRows=(career.history??[]).filter(row=>row.season===seasonNumber),ledger=career.seasonLedger?.[String(seasonNumber)],appearances=ledger?.appearances??seasonRows.length,ratingTotal=ledger?.ratingTotal??seasonRows.reduce((sum,row)=>sum+(row.rating??0),0),goals=ledger?.goals??seasonRows.reduce((sum,row)=>sum+(row.goals??0),0),assists=ledger?.assists??seasonRows.reduce((sum,row)=>sum+(row.assists??0),0),form=appearances?Math.max(-2,Math.min(3,(ratingTotal/appearances-6)*1.2+goals/appearances*.3+assists/appearances*.25)):0;
+  const internationalInterest=nationalExposure(career,season.calendar?.startYear??2026+(season.history?.length??0)).attention;
   const candidates=LEAGUES.flatMap(league=>league.teams.map(team=>({league,team}))).filter(({team})=>team.id!==currentId).map(({league,team})=>{
     const incumbentId=season.rosterIds?.[team.id]?.[index],incumbent=season.playerData?.[incumbentId],incumbentQuality=roleRating(incumbent?.attributes,career.position),gap=playerQuality-incumbentQuality;
-    return {leagueId:league.id,leagueName:league.name,teamId:team.id,teamName:season.teamNames?.[team.id]??team.name,strength:team.strength,gap,incumbentQuality,score:gap*2.4+team.strength*8+form+(career.journey?.wish==='home'&&league.id===season.leagueId?8:career.journey?.wish==='ambition'?team.strength*12:career.journey?.wish==='expression'&&team.style===(['runner','engine'].includes(career.style)?'counter':'balanced')?8:0)};
+    return {leagueId:league.id,leagueName:league.name,teamId:team.id,teamName:season.teamNames?.[team.id]??team.name,strength:team.strength,gap,incumbentQuality,score:gap*2.4+team.strength*8+form+internationalInterest*Math.max(0,team.strength-.98)*12+(career.journey?.wish==='home'&&league.id===season.leagueId?8:career.journey?.wish==='ambition'?team.strength*12:career.journey?.wish==='expression'&&team.style===(['runner','engine'].includes(career.style)?'counter':'balanced')?8:0)};
   }).filter(offer=>offer.gap>=(career.journey?-16:-7)||appearances>=8&&form>=.8).filter(offer=>!career.journey||(season.squadIds?.[offer.teamId]?.length??10)<12&&offer.strength<=(playerQuality>=78&&form>=.8?1.3:playerQuality>=68||appearances>=8&&form>=1.2?1.13:1.04));
   const shortlist=[];
   for(const group of [candidates.slice().sort((a,b)=>b.gap-a.gap||b.strength-a.strength),candidates.filter(offer=>offer.gap>=-12||form>=.8).sort((a,b)=>b.strength-a.strength||b.gap-a.gap),candidates.slice().sort((a,b)=>b.score-a.score)]){
@@ -53,7 +58,7 @@ export function careerTransferOffers(career,season){
     const positionName=career.position==='forward'?'前锋':career.position==='midfielder'?'中场':'后卫';
     const rationale=offer.gap>=1?`球队${positionName}位置需要竞争，你的匹配能力高于现有首发 ${Math.round(offer.gap)} 点。`:form>=.8?'你本赛季的稳定表现引起了球队关注。':`球队希望增加${positionName}位置的阵容深度。`;
     const ambition=offer.strength>=1.12?'争冠级阵容':offer.strength>=1.06?'强队阵容':offer.strength>=1.01?'中游阵容':'成长型阵容';
-    return {teamId:offer.teamId,leagueId:offer.leagueId,teamName:offer.teamName,leagueName:offer.leagueName,expectedRole,ambition,rationale};
+    return {teamId:offer.teamId,leagueId:offer.leagueId,teamName:offer.teamName,leagueName:offer.leagueName,expectedRole,ambition,rationale:rationale+(internationalInterest>0?' 大赛中的持续表现也提高了球队对你的关注。':'')};
   });
   if(career.journey?.seekLoan&&!career.journey.loan&&invitations.length)invitations[0]={...invitations[0],kind:'loan',expectedRole:'租借轮换',rationale:invitations[0].rationale+' 一季租借，下一次休赛期可考虑归队。'};
   const loan=career.journey?.loan;
